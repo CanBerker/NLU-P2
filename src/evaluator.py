@@ -7,7 +7,7 @@ class Evaluator(object):
     def validation_error(strategy: Strategy, training_data: np.ndarray, validation_data: np.ndarray) -> float:
         total = len(validation_data)
         correct = 0
-        strategy.train(training_data)
+        strategy.fit(training_data)
         for data_point in validation_data:
             prediction = strategy.predict(data_point)
             if prediction == data_point[-1]:

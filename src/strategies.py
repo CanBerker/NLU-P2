@@ -3,7 +3,7 @@ import random
 
 
 class Strategy(object):
-    def train(self, data: np.ndarray) -> None:
+    def fit(self, data: np.ndarray) -> None:
         raise NotImplementedError("Strategy not implemented.")
 
     def predict(self, data: np.ndarray) -> str:
@@ -11,7 +11,7 @@ class Strategy(object):
 
 
 class ConstantChooseFirstStrategy(Strategy):
-    def train(self, data: np.ndarray) -> None:
+    def fit(self, data: np.ndarray) -> None:
         pass
 
     def predict(self, data: np.ndarray) -> str:
@@ -19,7 +19,7 @@ class ConstantChooseFirstStrategy(Strategy):
 
 
 class PickClosestLengthStrategy(Strategy):
-    def train(self, data: np.ndarray) -> None:
+    def fit(self, data: np.ndarray) -> None:
         pass
 
     def predict(self, data: np.ndarray) -> str:
@@ -34,7 +34,7 @@ class PickClosestLengthStrategy(Strategy):
 
 
 class ConstantPickLongestStrategy(Strategy):
-    def train(self, data: np.ndarray) -> None:
+    def fit(self, data: np.ndarray) -> None:
         pass
 
     def predict(self, data: np.ndarray) -> str:
@@ -47,7 +47,7 @@ class ConstantPickLongestStrategy(Strategy):
 
 
 class PickRandomStrategy(Strategy):
-    def train(self, data: np.ndarray) -> None:
+    def fit(self, data: np.ndarray) -> None:
         pass
 
     def predict(self, data: np.ndarray) -> str:
