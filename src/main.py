@@ -1,7 +1,6 @@
 import readers
 from evaluator import Evaluator
-from strategies import ConstantChooseFirstStrategy, PickClosestLengthStrategy, ConstantPickLongestStrategy,\
-    PickRandomStrategy
+from strategies.lstm import CharacterBasedLstmStrategy
 import os
 
 if __name__ == '__main__':
@@ -15,6 +14,6 @@ if __name__ == '__main__':
 
     train_data = readers.TrainReader(train_data_loc).read()
     validation_data = readers.ValidationReader(validation_data_loc).read()
-    strategy = PickRandomStrategy()
+    strategy = CharacterBasedLstmStrategy()
     validation_error = Evaluator.validation_error(strategy, train_data, validation_data)
     print('Validation error: {}'.format(validation_error))
