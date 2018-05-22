@@ -5,11 +5,10 @@ from strategies import Strategy
 class Evaluator(object):
     @staticmethod
     def validation_error(strategy: Strategy, training_data: np.ndarray, validation_data: np.ndarray) -> float:
-        total = len(validation_data)
-        correct = 0
-        strategy.fit(training_data)
-        for data_point in validation_data:
-            prediction = strategy.predict(data_point)
-            if prediction == data_point[-1]:
-                correct += 1
-        return correct / total
+        val_stories, val_labels = np.split(validation_data, [-1], axis=1 )
+        val_labels = np.squeeze(val_labels)
+        
+        strategy.fit(training_data)        
+        predictions = strategy.predict(val_stories)
+        
+        return np.mean(np.equal(predictions, val_labels.astype(int)))
