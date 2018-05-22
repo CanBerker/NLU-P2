@@ -1,6 +1,8 @@
 import readers
 from evaluator import Evaluator
 from strategies.lstm import CharacterBasedLstmStrategy
+from strategies.sentiment_trajectory import SentimentTracjectoryStrategy
+
 import os
 
 if __name__ == '__main__':
@@ -14,6 +16,6 @@ if __name__ == '__main__':
 
     train_data = readers.TrainReader(train_data_loc).read()
     validation_data = readers.ValidationReader(validation_data_loc).read()
-    strategy = CharacterBasedLstmStrategy()
+    strategy = SentimentTracjectoryStrategy()
     validation_error = Evaluator.validation_error(strategy, train_data, validation_data)
     print('Validation error: {}'.format(validation_error))
