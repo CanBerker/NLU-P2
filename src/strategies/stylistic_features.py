@@ -16,7 +16,7 @@ class StylisticFeaturesStrategy(Strategy):
         #np.random.seed()
         # Parameters
         self.word_gram_range = (1,4)
-        self.char_gram_range = (4,4)
+        self.char_gram_range = (1,5)
         self.correct_label = 1
         self.wrong_label = 0
         self.perform_PCA = False
@@ -103,10 +103,7 @@ class StylisticFeaturesStrategy(Strategy):
     def all_equal(self, array):        
         return np.unique(array).size == 1
     
-    def extract_features(self, stories, fit=False):
-        #stories = np.apply_along_axis(lambda x: ' '.join(x), 1, stories)
-        
-        print(stories.shape)
+    def extract_features(self, stories, fit=False):        
         if fit:
             self.fit_extractors(stories)
         elif not self.fitted_extracters:
@@ -114,7 +111,6 @@ class StylisticFeaturesStrategy(Strategy):
                 + "run extract_features with fit=True at least once before"
                 +   " extracting features.")
         
-        # Pile them up
         feats = [extr.transform((stories)) for extr in self.get_extractors()]
         full_features = sp.hstack(tuple(feats))
         
@@ -130,7 +126,7 @@ class StylisticFeaturesStrategy(Strategy):
     def fit_extractors(self, stories):
         self.fitted_extracters = True
         self.word_vectorizer = CV(analyzer='word',ngram_range=self.word_gram_range) # Word grams
-        self.char_vectorizer = CV(analyzer='char',ngram_range=self.char_gram_range) # Char
+        self.char_vectorizer = CV(analyzer='char',ngram_range=self.char_gram_range,min_df=5) # Char
         self.length_exctractor = LengthExtractor()
         
         # One loop to fit them all and in darkness ... fit them?
@@ -139,7 +135,8 @@ class StylisticFeaturesStrategy(Strategy):
             
     def get_extractors(self):
         # Put the feature extractors here!
-        return [self.word_vectorizer, 
+        return [
+                self.word_vectorizer, 
                 self.char_vectorizer, 
                 self.length_exctractor
                 ]
@@ -192,7 +189,8 @@ class StylisticFeaturesStrategy(Strategy):
             expanded_labels.extend(labels)
         
         return np.array(expanded_labels)
-        
+
+# Custom extracters go here they should have at least fit() and transform()
 class LengthExtractor:
     def fit(self, data):
         pass
