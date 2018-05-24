@@ -1,5 +1,9 @@
 import numpy as np
 import scipy.sparse as sp
+import time
+import _pickle as cPickle 
+
+from scipy.spatial.distance import cosine as cos_sim
 
 from sklearn.model_selection import train_test_split
 from strategies import Strategy
@@ -8,45 +12,32 @@ from sklearn.naive_bayes import MultinomialNB as MB
 from sklearn.svm import SVC as SVC
 from sklearn.ensemble import RandomForestClassifier as RF
 from sklearn.decomposition import TruncatedSVD as PCA
+from sklearn.decomposition import LatentDirichletAllocation as LDA
 
-class StylisticFeaturesStrategy(Strategy):
-    def fit(self, data: np.ndarray) -> None:
-        #This one is special it expects the validation set :/
+class TopicDiscoveryStrategy(Strategy):
+    def fit(self, data: np.ndarray, val: np.ndarray) -> None:
+        # This one is special it expects the validation set :/
         
         #np.random.seed()
-        # Parameters
-        self.word_gram_range = (1,4)
-        self.char_gram_range = (1,5)
-        self.correct_label = 1
-        self.wrong_label = 0
-        self.perform_PCA = False
-        self.n_components_PCA = 200
-        self.classifier = MB()
-        self.train_split = 0.7
+        # Parameters 
+        self.ngram_range = (1,1)
+        self.n_topics = 10
+        self.topic_extractor = LDA(n_components = self.n_topics, evaluate_every=0, n_jobs = -1, max_iter = 5)
         
-        # To check how nice this ACTUALLY is!
-        train_stories, test_stories = train_test_split(data, train_size = self.train_split)
-       
-        # Decompose the data 
-        _ = train_stories[:,0]                      # Some shit I don't know
-        _ = train_stories[:,1:5]                    # Story leading up to options
-        endings = train_stories[:,5:7]              # 2 options
-        correct = train_stories[:,7].astype(int)    # indicates correct option
+        #Decompose data
+        _ = data[:,0]
+        _ = data[:,1]
+        partial_stories = data[:,2:6]
+        endings = data[:,6]
                 
-        labels = self.complete_labels(correct, 2)   # Create the labels for all the options
+        bag_of_words = self.extract_bag_of_words(partial_stories, fit=True)
         
-        # Extract features of ONLY THE ENDINGS!!!
-        # endings.flatten() [n_endings] values are strings
-        ending_feats = self.extract_features(endings.flatten(), fit=True)
-         
-        #Start fitting to see if we capture anything that isn't just noise!
-        self.classifier.fit(ending_feats, labels)
-        
-        # TEMP
-        pred = self.predict(test_stories)
-        test_labels = test_stories[:,7].astype(int) # Last column has labels
-        print("Actual validation accuracy: {}".format( np.mean(np.equal(pred, test_labels))))
-        # TEMP
+        start = time.time()
+        print("Starting to fit latent topic discovery, this might take a while.")
+        self.topic_extractor.fit(bag_of_words)
+        with open('my_dumped_classifier.pkl', 'wb') as fid:
+            cPickle.dump(self.topic_extractor, fid)   
+        print("Finished LTD... {}".format(time.time() - start))
         
         pass
 
@@ -54,21 +45,49 @@ class StylisticFeaturesStrategy(Strategy):
         
         # Decompose the data
         _ = data[:,0]
-        _ = data[:,1:5]
+        partial_stories = data[:,1:5]
         endings = data[:,5:7]
         
-        # Extract features of ONLY THE ENDINGS!!!
-        endings_features = self.extract_features(endings.flatten())
+        partial_stories = self.extract_bag_of_words(partial_stories)        
+        endings = self.extract_bag_of_words(endings.flatten()[:,np.newaxis])
         
-        # --   From here it's a bit hacky but it can be cleaned if needed    --
-        # From here assume that stories[:,i:i+1] is the same story with diff endings
-        # as longs as i is an even number! not optimal but cba to make it nice for now
+        print(partial_stories.shape, endings.shape)
         
-        predictions = self.classifier.predict_proba(endings_features)
-        predictions = np.reshape(predictions, (-1,2,2)) #[n_samples, 2, 2]
-        predictions = [self.resolve_prediction(distr_for_options) for distr_for_options in predictions]
-                
-        return np.array(predictions)
+        topic_distribution_part = self.topic_extractor.transform(partial_stories)
+        topic_distribution_ending = self.topic_extractor.transform(endings)
+        # [n_samples*2, n_topics]
+        
+        # [n_samples*2, n_topics] --> [n_samples, 2, n_topics]
+        topic_distribution_endings = np.reshape(topic_distribution_ending, (-1, 2, self.n_topics))
+        
+        decisions = []
+        for (story_distr, endings_distr) in list(zip(topic_distribution_part, topic_distribution_endings)):
+            decisions.append(np.argmin([cos_sim(story_distr, ending_distr) for ending_distr in endings_distr]))
+        
+        # {0,1} --> {1,2}
+        decisions = np.array(decisions) + 1
+        
+        return decisions
+    
+    def extract_bag_of_words(self, stories, fit=False):
+        # stories       [n_stories, n_sentences]        
+        
+        print(stories.shape)
+        
+        stories = np.apply_along_axis(lambda x: ' '.join(x), 1, stories)
+        
+        if fit:
+            self.is_fitted = True
+            self.vectorizer = CV(ngram_range=self.ngram_range) # Vanilla BOW
+            print("Fitting vectorizer on {}".format(stories.shape))
+            self.vectorizer.fit(stories)
+        elif not self.is_fitted:
+            raise ValueError("Cannot extract BOW before fitting,"
+                +   " run extract_bag_of_words with fit=True at least once before"
+                +   " extracting features.")
+        
+        print("Starting to transform data.")
+        return self.vectorizer.transform(stories)
 
     def resolve_prediction(self, distributions_per_options):
         # distributions_per_options     [n_options, n_classes=2]
@@ -141,7 +160,39 @@ class StylisticFeaturesStrategy(Strategy):
                 self.char_vectorizer, 
                 self.length_exctractor
                 ]
+        
+    def complete_dataset(self, partial_stories, endings, correct_endings=None):
+        # partial_stories       [n_samples, n_sentences-1] (ending missing)
+        # endings               [n_samples, n_options]
+        # correct_endings       [n_samples] (values in range [1, n_options])
+                
+        #No bullshit
+        if len(endings) != len(partial_stories):
+            raise ValueError("The amount of stories given is not the same"
+                                + " as the amount of correct endings")
+        
+        _, n_options = endings.shape
+        
+        complete_stories = self.complete_stories(partial_stories, endings)
+        labels = self.complete_labels(correct_endings, n_options)
+        
+        return complete_stories, labels
+        
+    def complete_stories(self, partial_stories, endings):
+        # Check above for dimensions
+        
+        #No bullshit
+        if len(partial_stories) != len(endings):
+            raise ValueError( "Not every story has a (happy) end!"
+                            + " Or equally sad not every ending has a happy story :(")
+        
+        expanded_set = []
+        for (part, endings) in zip(partial_stories, endings):
+            completed_stories = [np.append(part, ending) for ending in endings]
+            expanded_set.extend(completed_stories)
             
+        return np.array(expanded_set)
+        
     def complete_labels(self, correct_endings, n_options):
         #Check above for dimensions and meanings
         

@@ -30,9 +30,9 @@ class SentimentTracjectoryStrategy(Strategy):
                 
         #___ Counting classifier       
         #Returns a [n_values, ..., n_values] where len(...) = len(story_grouping)
-        #self.counts = self.count_elements(trajectories, self.n_values, smoothing = 5)
+        self.counts = self.count_elements(trajectories, self.n_values, smoothing = 5)
         #___ SVC classifier
-        self.classifier.fit(trajectories[:,:-1], trajectories[:,-1])
+        #self.classifier.fit(trajectories[:,:-1], trajectories[:,-1])
         #___
         
         pass
@@ -66,8 +66,8 @@ class SentimentTracjectoryStrategy(Strategy):
     
     def find_ending_distribution(self, partial_stories):
         partial_trajectories = self.find_trajectories(partial_stories)
-        #return [self.counts[tuple(partial_trajectory)] for partial_trajectory in partial_trajectories]
-        return self.classifier.predict_proba(partial_trajectories)
+        return [self.counts[tuple(partial_trajectory)] for partial_trajectory in partial_trajectories]
+        #return self.classifier.predict_proba(partial_trajectories)
         
     def count_elements(self, objs, n_values, smoothing=1):
         #Method assumes that values are in range [0,n_values] (n_values excluded)
