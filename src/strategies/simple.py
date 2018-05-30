@@ -1,6 +1,7 @@
 import numpy as np
 import random
 
+from strategies import Strategy
 
 class ConstantChooseFirstStrategy(Strategy):
     def fit(self, data: np.ndarray) -> None:

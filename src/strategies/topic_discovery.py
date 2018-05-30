@@ -5,8 +5,9 @@ import _pickle as cPickle
 
 from scipy.spatial.distance import cosine as cos_sim
 
-from sklearn.model_selection import train_test_split
 from strategies import Strategy
+
+from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer as CV
 from sklearn.naive_bayes import MultinomialNB as MB
 from sklearn.svm import SVC as SVC
@@ -21,8 +22,8 @@ class TopicDiscoveryStrategy(Strategy):
         #np.random.seed()
         # Parameters 
         self.ngram_range = (1,1)
-        self.n_topics = 10
-        self.topic_extractor = LDA(n_components = self.n_topics, evaluate_every=0, n_jobs = -1, max_iter = 5)
+        self.n_topics = 1
+        self.topic_extractor = LDA(n_components = self.n_topics, evaluate_every=0, n_jobs = -1, max_iter = 1)
         
         #Decompose data
         _ = data[:,0]

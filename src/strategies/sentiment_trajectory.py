@@ -1,5 +1,4 @@
 import numpy as np
-import random
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from sklearn.ensemble import RandomForestClassifier as rf
 
@@ -126,4 +125,3 @@ class SentimentTracjectoryStrategy(Strategy):
             low_ind += group_size
         
         return np.array(grouped_data).T
-            
