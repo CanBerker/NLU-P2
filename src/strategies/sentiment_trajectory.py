@@ -4,7 +4,12 @@ from sklearn.ensemble import RandomForestClassifier as rf
 
 from strategies import Strategy
 
-class SentimentTracjectoryStrategy(Strategy):
+class SentimentTrajectoryStrategy(Strategy):
+    def __init__(self, evaluator):
+        import nltk
+        nltk.download('vader_lexicon')
+        self.evaluator = evaluator
+
     def fit(self, data: np.ndarray) -> None:
     
         self.sentimentAnalyzer = SentimentIntensityAnalyzer()

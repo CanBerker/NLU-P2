@@ -3,9 +3,12 @@ import os
 
 from evaluators.per_dp_evaluator import PerDataPointEvaluator
 from evaluators.topic_discovery_evaluator import TopicDiscoveryEvaluator
+from evaluators.sentiment_trajectory_evaluator import OnlyValidationDataEvaluator
 
-from strategies.sklearn_nb import NBStrategy
+from strategies.sentiment_trajectory import SentimentTrajectoryStrategy
+from strategies.stylistic_features import StylisticFeaturesStrategy
 from strategies.topic_discovery import TopicDiscoveryStrategy
+from strategies.sklearn_nb import NBStrategy
 
 if __name__ == '__main__':
     train_data_loc = os.path.join(os.path.join(
@@ -18,8 +21,10 @@ if __name__ == '__main__':
 
     train_data = readers.TrainReader(train_data_loc).read()
     validation_data = readers.ValidationReader(validation_data_loc).read()
-    strategy = TopicDiscoveryStrategy(TopicDiscoveryEvaluator())
+    #strategy = TopicDiscoveryStrategy(TopicDiscoveryEvaluator())
+    #strategy = SentimentTrajectoryStrategy(SentimentTrajectoryEvaluator())
     #strategy = NBStrategy(PerDataPointEvaluator())
+    strategy = StylisticFeaturesStrategy(OnlyValidationDataEvaluator())
     validation_error = strategy.evaluator.validation_error(strategy, train_data, validation_data)
     #validation_error = Evaluator.validation_error(strategy, train_data, validation_data)
     print('Validation error: {}'.format(validation_error))
