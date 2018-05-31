@@ -9,6 +9,8 @@ from strategies.sentiment_trajectory import SentimentTrajectoryStrategy
 from strategies.stylistic_features import StylisticFeaturesStrategy
 from strategies.topic_discovery import TopicDiscoveryStrategy
 from strategies.sklearn_nb import NBStrategy
+from data_augmentation import augment_data
+
 
 if __name__ == '__main__':
     train_data_loc = os.path.join(os.path.join(
@@ -21,6 +23,9 @@ if __name__ == '__main__':
 
     train_data = readers.TrainReader(train_data_loc).read()
     validation_data = readers.ValidationReader(validation_data_loc).read()
+
+    augmented_data = augment_data(train_data, 4)
+
     #strategy = TopicDiscoveryStrategy(TopicDiscoveryEvaluator())
     #strategy = SentimentTrajectoryStrategy(SentimentTrajectoryEvaluator())
     #strategy = NBStrategy(PerDataPointEvaluator())

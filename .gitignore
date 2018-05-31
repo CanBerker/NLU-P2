@@ -4,3 +4,4 @@ __pycache__/
 *.py[cod]
 venv/
 *.h5
+*.npy
