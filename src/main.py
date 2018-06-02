@@ -18,7 +18,7 @@ if __name__ == '__main__':
     train_data_loc = os.path.join(os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'train_small.csv')
     validation_data_loc = os.path.join(os.path.join(
-        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'validation_small.csv')
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'validation.csv')
 
     print('Train data location: {}'.format(train_data_loc))
     print('Validation data location: {}'.format(validation_data_loc))

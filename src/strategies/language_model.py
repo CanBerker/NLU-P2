@@ -28,42 +28,51 @@ class LanguageModelStrategy(Strategy):
 
     def fit(self, data: np.ndarray) -> None:
         
-        self.max_vocab = 1200000
+        self.max_vocab = 20000
         self.oov_token = "<unk>"
         self.embedding_size = 100
-        self.hidden_size = 50
-        self.use_dropout = False
+        self.hidden_size = 512
+        self.use_dropout = True
         self.dropout_rate = 0.5
-        # self.batch_size = 64
         self.train_size = 0.8
         self.optimizer = Adam()
         self.num_epochs = 200
-        self.save_path = "/home/marenato/Documents/workspacePhd/NLU-P2/checkpoint/"
-        glove_path = "/home/marenato/Documents/workspacePhd/NLU-P2/glove.twitter.27B.25d.txt"
+        self.save_path = "checkpoint/"
+        self.glove_path = "glove.6B.50d.txt"
+        self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
         
+        
+        # Decompose data
         _ = data[:,0]
         _ = data[:,1]
-        partial = data[:,2:6]
-        endings = data[:,6]
+        _ = data[:,2:6]
+        _ = data[:,6]
         
+        # Get full stories to train language model on.
         full_stories = data[:,2:7]
-
-        word_to_emb, word_to_int, int_to_emb = load_glove(glove_path)
-
-        stories_words = self.merge_sentences(full_stories)
-        # print(stories_words.shape)
-        tokenizer = nltk.tokenize.TreebankWordTokenizer()
-        # tokenizer
-        tokenized = np.array([tokenizer.tokenize(story) for story in stories_words])
-
-        embedded_stories = embed_to_ints(tokenized, word_to_int=word_to_int)
-
-        embedding_matrix = self.select_embeddings(tokenized, word_to_int)
-
-        # embedded_stories = self.embed_data(stories_words, word_to_int)
-
-                
-        model = self.build_graph(embedding_matrix)
+        
+        # Paste sentences next to each other
+        stories_strings = self.merge_sentences(full_stories)
+        stories_strings = self.clean_strings([lambda x: x.lower(),
+                                              lambda x: x.replace(".", " . ")],stories_strings)
+        
+        # Tokenize the data into tokens using the standard tokenizer
+        stories_tokenized = self.tokenize_data(self.tokenizer, stories_strings)
+        
+        # Load the embeddings of choice.
+        word_to_emb, word_to_int, int_to_emb = load_glove(self.glove_path)
+        # Reduce the embeddings to what you need only.
+        word_to_emb, word_to_int, int_to_emb = self.reduce_embedding(int_to_emb, word_to_int, word_to_emb, stories_tokenized)
+        
+        # Embed our tokens with the reduced embedding
+        embedded_stories = embed_to_ints(stories_tokenized, word_to_int=word_to_int)
+        
+        print("Example embedding:{}".format(embedded_stories[0]))
+        
+        # Build the LSTM LM with softmax
+        embedding_matrix = np.array(int_to_emb)
+        self.max_vocab, _ = embedding_matrix.shape
+        model = self.build_graph(np.array(embedding_matrix))
         
         train_x, validation_x = train_test_split(embedded_stories, train_size = self.train_size)
         
@@ -83,8 +92,64 @@ class LanguageModelStrategy(Strategy):
                             validation_steps=1,#len(validation_x)//(self.batch_size) ,#len(validation_x)//(self.batch_size * self.max_seq_size),
                             callbacks=[checkpointer]
                             )
-        self.test_model(train_x, int_to_word)
+        self.test_model(train_x, self.inverse_map(word_to_int))
 
+    def reduce_embedding(self, int_to_emb, word_to_int, word_to_emb, tokens):
+        
+        # All next to each other
+        tokens = np.concatenate(tokens)
+        
+        # Find unique tokens and count them
+        unsorted_uniques, unsorted_counts = np.unique(tokens, return_counts = True)
+        
+        # print Some stuff
+        print("Average token frequency:{}".format(np.average(unsorted_counts)))
+        print("Total amount of unique tokens:{}".format(len(unsorted_uniques)))
+        
+        # Sort tokens by frequency
+        sorted_unique_tokens = list(zip(unsorted_uniques, unsorted_counts))
+        sorted_unique_tokens.sort(key=lambda t: t[1], reverse=True)
+        
+        _, emb_dim = np.array(int_to_emb).shape
+        
+        #For statistics
+        self.total_tried = 0
+        self.total_failed= 0
+        
+        r_word_to_int   = {w:i                                     for i, (w,c) in enumerate(sorted_unique_tokens)}
+        r_int_to_emb    = [self.resolve(w, word_to_emb, emb_dim)   for i, (w,c) in enumerate(sorted_unique_tokens)]
+        r_word_to_embed = {w:self.resolve(w, word_to_emb, emb_dim) for i, (w,c) in enumerate(sorted_unique_tokens)}
+        
+        print("Total amount of tokens attempted:      {}".format(self.total_tried))
+        print("Total amount of tokens failed to embed:{}".format(self.total_failed))
+        print("---> {}%".format(self.total_failed/self.total_tried))
+        print("Shape of new embedding:{}".format(np.array(r_int_to_emb).shape))
+        
+        return r_word_to_embed, r_word_to_int, r_int_to_emb
+    
+    def resolve(self, word, word_to_emb, emb_dim):
+        self.total_tried += 1
+        try:
+            emb = word_to_emb[word]
+        except:
+            emb = np.random.rand(emb_dim)
+            print("Was not able to find an embedding for:{}".format(word))
+            self.total_failed +=1
+        return emb
+        
+    def clean_strings(self, cleaners, data):
+        for cleaner in cleaners:
+            data = np.vectorize(cleaner)(data)
+        return data
+        
+    def tokenize_data(self, tokenizer, data):
+        #data:      [n_stories]
+        start = time.time()
+        print("--Starting to tokenize--")
+        res = np.array([tokenizer.tokenize(string) for string in data])
+        print("--Done tokenizing--{}\n".format(time.time()-start))
+        return res
+        
     def test_model(self, train_data, reversed_dictionary):
         model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
         dummy_iters = 40
@@ -119,9 +184,9 @@ class LanguageModelStrategy(Strategy):
 
     def build_graph(self, embedding_matrix):
         self.log("Building graph")
-        vocab_size = self.max_vocab
+        vocab_size, embed_size = embedding_matrix.shape
         model = Sequential()
-        model.add(Embedding(vocab_size, self.embedding_size, embeddings_initializer=Constant(value=embedding_matrix)))
+        model.add(Embedding(vocab_size, embed_size, weights=[embedding_matrix], trainable=False))
         model.add(LSTM(self.hidden_size, return_sequences=True))
         #model.add(LSTM(hidden_size, return_sequences=True))
         if self.use_dropout:
