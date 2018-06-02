@@ -11,6 +11,7 @@ from strategies.stylistic_features import StylisticFeaturesStrategy
 from strategies.topic_discovery import TopicDiscoveryStrategy
 from strategies.sklearn_nb import NBStrategy
 from strategies.language_model import LanguageModelStrategy
+from strategies.topic_consistency import TopicConsistencyStrategy
 from data_augmentation import augment_data
 
 
@@ -32,7 +33,8 @@ if __name__ == '__main__':
     #strategy = SentimentTrajectoryStrategy(SentimentTrajectoryEvaluator())
     #strategy = NBStrategy(PerDataPointEvaluator())
     #strategy = StylisticFeaturesStrategy(OnlyValidationDataEvaluator())
-    strategy = LanguageModelStrategy(Evaluator())
+    # strategy = LanguageModelStrategy(Evaluator())
+    strategy = TopicConsistencyStrategy(Evaluator())
     validation_error = strategy.evaluator.validation_error(strategy, train_data, validation_data)
     #validation_error = Evaluator.validation_error(strategy, train_data, validation_data)
     print('Validation error: {}'.format(validation_error))

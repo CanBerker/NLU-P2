@@ -220,4 +220,3 @@ class LengthExtractor:
         # data is [n_samples] values are documents
         # It's to transpose the array so it's viewed as a matrix so as to be able to hstack it later!
         return sp.csr_matrix(np.vectorize(len)(data)[:,np.newaxis])
-        

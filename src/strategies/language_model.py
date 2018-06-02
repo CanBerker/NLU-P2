@@ -19,15 +19,10 @@ from strategies import Strategy
 from utils.loader import load_glove
 from utils.utils import convert_to_int, embed_to_ints
 
+
 class LanguageModelStrategy(Strategy):
 
-    @staticmethod
-    def log(line):
-        print("[LSTM] {0}".format(line))
-
-
     def fit(self, data: np.ndarray) -> None:
-        
         self.max_vocab = 1200000
         self.oov_token = "<unk>"
         self.embedding_size = 100
@@ -76,14 +71,14 @@ class LanguageModelStrategy(Strategy):
 
         checkpointer = ModelCheckpoint(filepath=self.save_path + '/model-{epoch:02d}.hdf5', verbose=1)
 
-        model.fit_generator(train_generator.generate(),
-                            steps_per_epoch=train_generator.n_batches,#len(train_x) // (self.batch_size * self.max_seq_size),
-                            epochs=self.num_epochs,
-                            validation_data=valid_data_generator.generate(),
-                            validation_steps=1,#len(validation_x)//(self.batch_size) ,#len(validation_x)//(self.batch_size * self.max_seq_size),
-                            callbacks=[checkpointer]
-                            )
-        self.test_model(train_x, int_to_word)
+        # model.fit_generator(train_generator.generate(),
+        #                     steps_per_epoch=train_generator.n_batches,#len(train_x) // (self.batch_size * self.max_seq_size),
+        #                     epochs=self.num_epochs,
+        #                     validation_data=valid_data_generator.generate(),
+        #                     validation_steps=1,#len(validation_x)//(self.batch_size) ,#len(validation_x)//(self.batch_size * self.max_seq_size),
+        #                     callbacks=[checkpointer]
+        #                     )
+        # self.test_model(train_x, int_to_word)
 
     def test_model(self, train_data, reversed_dictionary):
         model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
