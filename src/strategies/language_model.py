@@ -1,6 +1,5 @@
 import keras as kr
 import numpy as np
-import string
 import time
 
 from keras.preprocessing.text import Tokenizer as tk
@@ -8,7 +7,6 @@ from keras.models import Sequential, load_model
 from keras.layers import Dense, Activation, Embedding, Flatten, Dropout, TimeDistributed, Reshape, Lambda
 from keras.layers import LSTM
 from keras.optimizers import RMSprop, Adam, SGD
-from keras import backend as K
 from keras.utils import to_categorical
 from keras.callbacks import ModelCheckpoint
 
@@ -19,7 +17,8 @@ from strategies import Strategy
 
 class LanguageModelStrategy(Strategy):
 
-    def log(self, line):
+    @staticmethod
+    def log(line):
         print("[LSTM] {0}".format(line))
         
     def fit(self, data: np.ndarray) -> None:
@@ -30,7 +29,7 @@ class LanguageModelStrategy(Strategy):
         self.hidden_size = 50
         self.use_dropout = True
         self.dropout_rate = 0.5
-        self.batch_size = 32
+        self.batch_size = 64
         self.train_size = 0.8
         self.optimizer = Adam()
         self.num_epochs = 10
@@ -43,47 +42,66 @@ class LanguageModelStrategy(Strategy):
         
         full_stories = data[:,2:7]
         
-        stories = self.merge_sentences(full_stories)
-        self.fit_tokenizer(stories)
+        stories_words = self.merge_sentences(full_stories)
+        self.fit_tokenizer(stories_words)
         
         word_to_int, int_to_word = self.get_int_mappings()
                 
-        embedded_stories = self.embed_data(stories, word_to_int)
+        embedded_stories = self.embed_data(stories_words, word_to_int)
+        self.max_seq_size = 30
+        #self.max_seq_size, self.min_seq_size = self.find_max_seq(embedded_stories)
         
-        self.max_seq_sz = self.find_max_seq(embedded_stories)
-        
-        embedded_stories = self.pad_data(embedded_stories, self.max_seq_sz)
+        #embedded_stories = self.pad_data(embedded_stories, self.max_seq_size)
                 
         model = self.build_graph()
         
         train_x, validation_x = train_test_split(embedded_stories, train_size = self.train_size)
         
         train_generator = KerasBatchGenerator(train_x,
-                                        self.max_seq_sz,
-                                        self.batch_size, 
-                                        self.max_vocab,
-                                        skip_step=5)
+                                              self.max_seq_size,
+                                              self.batch_size,
+                                              self.max_vocab,
+                                              skip_step=5)
         valid_data_generator = KerasBatchGenerator(validation_x,
-                                        self.max_seq_sz,
-                                        self.batch_size, 
-                                        self.max_vocab,
-                                        skip_step=5)
+                                                   self.max_seq_size,
+                                                   self.batch_size,
+                                                   self.max_vocab,
+                                                   skip_step=5)
                                                     
         checkpointer = ModelCheckpoint(filepath=self.save_path + '/model-{epoch:02d}.hdf5', verbose=1)
         
         model.fit_generator(train_generator.generate(),
-                            len(train_x)//(self.batch_size*self.max_seq_sz), 
+                            len(train_x) // (self.batch_size * self.max_seq_size),
                             self.num_epochs,
                             validation_data=valid_data_generator.generate(),
-                            validation_steps=len(validation_x)//(self.batch_size*self.max_seq_sz), 
-                            callbacks=[checkpointer])                         
-        
+                            validation_steps=len(validation_x)//(self.batch_size * self.max_seq_size),
+                            callbacks=[checkpointer])
+        self.test_model(train_x, int_to_word)
+
+    def test_model(self, train_data, reversed_dictionary):
+        model = load_model(self.save_path + "/model-10.hdf5")
+        dummy_iters = 40
+        example_training_generator = KerasBatchGenerator(train_data, self.max_seq_size, 1, self.max_vocab, skip_step=1)
+        print("Training data:")
+        for i in range(dummy_iters):
+            dummy = next(example_training_generator.generate())
+        num_predict = 10
+        true_print_out = "Actual words: "
+        pred_print_out = "Predicted words: "
+        for i in range(num_predict):
+            data = next(example_training_generator.generate())
+            prediction = model.predict(data[0])
+            predict_word = np.argmax(prediction[:, self.max_seq_size-1, :])
+            true_print_out += reversed_dictionary[train_data[self.max_seq_size + dummy_iters + i]] + " "
+            pred_print_out += reversed_dictionary[predict_word] + " "
+        print(true_print_out)
+        print(pred_print_out)
 
     def build_graph(self):
         self.log("Building graph")
         vocab_size = self.max_vocab
         model = Sequential()
-        model.add(Embedding(vocab_size, self.embedding_size, input_length=self.max_seq_sz))
+        model.add(Embedding(vocab_size, self.embedding_size, input_length=self.max_seq_size))
         model.add(LSTM(self.hidden_size, return_sequences=True))
         #model.add(LSTM(hidden_size, return_sequences=True))
         if self.use_dropout:
@@ -102,7 +120,11 @@ class LanguageModelStrategy(Strategy):
     def merge_sentences(self, data):
         #data:      [n_stories, n_sentences]
         #return:    [n_stories]
-        return np.apply_along_axis(lambda x: ' '.join(x), 1, data)
+        tmp = np.apply_along_axis(lambda x: ' '.join(x), 1, data)
+        list_of_words = []
+        for s in tmp:
+            list_of_words.extend(s.split(" "))
+        return list_of_words
         
     def fit_tokenizer(self, stories):
         #stories:   [n_stories]
@@ -120,7 +142,8 @@ class LanguageModelStrategy(Strategy):
         return {v: k for k, v in map.items()}
         
     def embed_data(self, text_data, word_to_int):
-        return np.array(self.tokenizer.texts_to_sequences(text_data))
+        return [word_to_int[w] for w in text_data if w in word_to_int ]
+        #return self.tokenizer.texts_to_sequences(text_data)
         
     def pad_data(self, X, max_seq_size):
         start = time.time()
@@ -140,12 +163,18 @@ class LanguageModelStrategy(Strategy):
         
     def find_max_seq(self, data):
         #data:      [n_samples, None] (None is variable length)
-        m_len = -1
-        for s in data:
-            if len(s) > m_len:
-                m_len = len(s)
+        max_len = -1
+        min_len = 10000
+        for i, s in enumerate(data):
+            s_len = len(s)
+            if s_len > max_len:
+                max_len = s_len
+            if s_len < min_len:
+                min_len = s_len
+                _, int_to_word = self.get_int_mappings()
+                print(i, "=", [int_to_word[ss] for ss in s])
                 
-        return m_len
+        return [max_len, min_len]
 
 class KerasBatchGenerator(object):
 
@@ -167,7 +196,12 @@ class KerasBatchGenerator(object):
         y = np.zeros((self.batch_size, self.num_steps, self.vocabulary))
         while True:
             for i in range(self.batch_size):
-                #Current index 
-                x[i,:] = self.data[self.current_idx+i][0:-1]
-                
+                if self.current_idx + self.num_steps >= len(self.data):
+                    # reset the index back to the start of the data set
+                    self.current_idx = 0
+            x[i, :] = self.data[self.current_idx:self.current_idx + self.num_steps]
+            temp_y = self.data[self.current_idx + 1:self.current_idx + self.num_steps + 1]
+            # convert all of temp_y into a one hot representation
+            y[i, :, :] = to_categorical(temp_y, num_classes=self.vocabulary)
+            self.current_idx += self.skip_step
             yield x, y
