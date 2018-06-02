@@ -1,31 +1,34 @@
-import keras as kr
 import math
-import numpy as np
+import math
 import time
 
-from keras.preprocessing.text import Tokenizer as tk
-from keras.models import Sequential, load_model
-from keras.layers import Dense, Activation, Embedding, Flatten, Dropout, TimeDistributed, Reshape, Lambda
-from keras.layers import LSTM
-from keras.optimizers import RMSprop, Adam, SGD
-from keras.utils import to_categorical
-from keras.callbacks import ModelCheckpoint
+import numpy as np
 from keras.callbacks import Callback
-
+from keras.callbacks import ModelCheckpoint
+from keras.layers import Dense, Activation, Embedding, Dropout, TimeDistributed
+from keras.layers import LSTM
+from keras.models import Sequential, load_model
+from keras.optimizers import Adam
+from keras.initializers import Constant
+from keras.preprocessing.text import Tokenizer as tk
+from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
- 
-from strategies import Strategy
+import nltk
 
+from strategies import Strategy
+from utils.loader import load_glove
+from utils.utils import convert_to_int, embed_to_ints
 
 class LanguageModelStrategy(Strategy):
 
     @staticmethod
     def log(line):
         print("[LSTM] {0}".format(line))
-        
+
+
     def fit(self, data: np.ndarray) -> None:
         
-        self.max_vocab = 100
+        self.max_vocab = 1200000
         self.oov_token = "<unk>"
         self.embedding_size = 100
         self.hidden_size = 50
@@ -36,6 +39,7 @@ class LanguageModelStrategy(Strategy):
         self.optimizer = Adam()
         self.num_epochs = 200
         self.save_path = "/home/marenato/Documents/workspacePhd/NLU-P2/checkpoint/"
+        glove_path = "/home/marenato/Documents/workspacePhd/NLU-P2/glove.twitter.27B.25d.txt"
         
         _ = data[:,0]
         _ = data[:,1]
@@ -43,19 +47,23 @@ class LanguageModelStrategy(Strategy):
         endings = data[:,6]
         
         full_stories = data[:,2:7]
-        
+
+        word_to_emb, word_to_int, int_to_emb = load_glove(glove_path)
+
         stories_words = self.merge_sentences(full_stories)
-        self.fit_tokenizer(stories_words)
-        
-        word_to_int, int_to_word = self.get_int_mappings()
+        # print(stories_words.shape)
+        tokenizer = nltk.tokenize.TreebankWordTokenizer()
+        # tokenizer
+        tokenized = np.array([tokenizer.tokenize(story) for story in stories_words])
+
+        embedded_stories = embed_to_ints(tokenized, word_to_int=word_to_int)
+
+        embedding_matrix = self.select_embeddings(tokenized, word_to_int)
+
+        # embedded_stories = self.embed_data(stories_words, word_to_int)
+
                 
-        embedded_stories = self.embed_data(stories_words, word_to_int)
-        #self.max_seq_size = 30
-        #self.max_seq_size, self.min_seq_size = self.find_max_seq(embedded_stories)
-        
-        #embedded_stories = self.pad_data(embedded_stories, self.max_seq_size)
-                
-        model = self.build_graph()
+        model = self.build_graph(embedding_matrix)
         
         train_x, validation_x = train_test_split(embedded_stories, train_size = self.train_size)
         
@@ -66,10 +74,6 @@ class LanguageModelStrategy(Strategy):
                                                    self.max_vocab,
                                                    skip_step=5)
 
-        # for i in range(100):
-        #     s = next(train_generator.generate())
-        #     print(s)
-        # print(s)
         checkpointer = ModelCheckpoint(filepath=self.save_path + '/model-{epoch:02d}.hdf5', verbose=1)
 
         model.fit_generator(train_generator.generate(),
@@ -113,11 +117,11 @@ class LanguageModelStrategy(Strategy):
 
         return np.array(all_samples)
 
-    def build_graph(self):
+    def build_graph(self, embedding_matrix):
         self.log("Building graph")
         vocab_size = self.max_vocab
         model = Sequential()
-        model.add(Embedding(vocab_size, self.embedding_size))
+        model.add(Embedding(vocab_size, self.embedding_size, embeddings_initializer=Constant(value=embedding_matrix)))
         model.add(LSTM(self.hidden_size, return_sequences=True))
         #model.add(LSTM(hidden_size, return_sequences=True))
         if self.use_dropout:
