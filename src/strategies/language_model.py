@@ -1,4 +1,5 @@
 import keras as kr
+import math
 import numpy as np
 import time
 
@@ -9,6 +10,7 @@ from keras.layers import LSTM
 from keras.optimizers import RMSprop, Adam, SGD
 from keras.utils import to_categorical
 from keras.callbacks import ModelCheckpoint
+from keras.callbacks import Callback
 
 from sklearn.model_selection import train_test_split
  
@@ -23,17 +25,17 @@ class LanguageModelStrategy(Strategy):
         
     def fit(self, data: np.ndarray) -> None:
         
-        self.max_vocab = 5000
+        self.max_vocab = 100
         self.oov_token = "<unk>"
-        self.embedding_size = 50
+        self.embedding_size = 100
         self.hidden_size = 50
-        self.use_dropout = True
+        self.use_dropout = False
         self.dropout_rate = 0.5
-        self.batch_size = 64
+        # self.batch_size = 64
         self.train_size = 0.8
         self.optimizer = Adam()
-        self.num_epochs = 10
-        self.save_path = "."
+        self.num_epochs = 200
+        self.save_path = "/home/marenato/Documents/workspacePhd/NLU-P2/checkpoint/"
         
         _ = data[:,0]
         _ = data[:,1]
@@ -48,7 +50,7 @@ class LanguageModelStrategy(Strategy):
         word_to_int, int_to_word = self.get_int_mappings()
                 
         embedded_stories = self.embed_data(stories_words, word_to_int)
-        self.max_seq_size = 30
+        #self.max_seq_size = 30
         #self.max_seq_size, self.min_seq_size = self.find_max_seq(embedded_stories)
         
         #embedded_stories = self.pad_data(embedded_stories, self.max_seq_size)
@@ -58,50 +60,64 @@ class LanguageModelStrategy(Strategy):
         train_x, validation_x = train_test_split(embedded_stories, train_size = self.train_size)
         
         train_generator = KerasBatchGenerator(train_x,
-                                              self.max_seq_size,
-                                              self.batch_size,
                                               self.max_vocab,
                                               skip_step=5)
         valid_data_generator = KerasBatchGenerator(validation_x,
-                                                   self.max_seq_size,
-                                                   self.batch_size,
                                                    self.max_vocab,
                                                    skip_step=5)
-                                                    
+
+        # for i in range(100):
+        #     s = next(train_generator.generate())
+        #     print(s)
+        # print(s)
         checkpointer = ModelCheckpoint(filepath=self.save_path + '/model-{epoch:02d}.hdf5', verbose=1)
-        
+
         model.fit_generator(train_generator.generate(),
-                            len(train_x) // (self.batch_size * self.max_seq_size),
-                            self.num_epochs,
+                            steps_per_epoch=train_generator.n_batches,#len(train_x) // (self.batch_size * self.max_seq_size),
+                            epochs=self.num_epochs,
                             validation_data=valid_data_generator.generate(),
-                            validation_steps=len(validation_x)//(self.batch_size * self.max_seq_size),
-                            callbacks=[checkpointer])
+                            validation_steps=1,#len(validation_x)//(self.batch_size) ,#len(validation_x)//(self.batch_size * self.max_seq_size),
+                            callbacks=[checkpointer]
+                            )
         self.test_model(train_x, int_to_word)
 
     def test_model(self, train_data, reversed_dictionary):
-        model = load_model(self.save_path + "/model-10.hdf5")
+        model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
         dummy_iters = 40
-        example_training_generator = KerasBatchGenerator(train_data, self.max_seq_size, 1, self.max_vocab, skip_step=1)
-        print("Training data:")
-        for i in range(dummy_iters):
-            dummy = next(example_training_generator.generate())
+        example_training_generator = KerasBatchGenerator(train_data, self.max_vocab, skip_step=1)
+        # print("Training data:")
+        # for i in range(dummy_iters):
+        #     dummy = next(example_training_generator.generate())
         num_predict = 10
         true_print_out = "Actual words: "
         pred_print_out = "Predicted words: "
         for i in range(num_predict):
             data = next(example_training_generator.generate())
             prediction = model.predict(data[0])
-            predict_word = np.argmax(prediction[:, self.max_seq_size-1, :])
-            true_print_out += reversed_dictionary[train_data[self.max_seq_size + dummy_iters + i]] + " "
-            pred_print_out += reversed_dictionary[predict_word] + " "
-        print(true_print_out)
-        print(pred_print_out)
+            predict_word = np.argmax(prediction,2)
+            print("true_print_out=", self.int_to_words(reversed_dictionary, data[0]))
+            print("pred_print_out=", self.int_to_words(reversed_dictionary, predict_word))
+            # true_print_out += reversed_dictionary[data[0][i]] + " "
+            # pred_print_out += reversed_dictionary[predict_word] + " "
+
+
+    def int_to_words(self, reversed_dictionary, data):
+        # data[batch_size, num_steps]
+
+        all_samples = []
+        for sample in data:
+            s = []
+            for i in sample:
+                s.append(reversed_dictionary[i])
+            all_samples.append(' '.join(s))
+
+        return np.array(all_samples)
 
     def build_graph(self):
         self.log("Building graph")
         vocab_size = self.max_vocab
         model = Sequential()
-        model.add(Embedding(vocab_size, self.embedding_size, input_length=self.max_seq_size))
+        model.add(Embedding(vocab_size, self.embedding_size))
         model.add(LSTM(self.hidden_size, return_sequences=True))
         #model.add(LSTM(hidden_size, return_sequences=True))
         if self.use_dropout:
@@ -109,7 +125,7 @@ class LanguageModelStrategy(Strategy):
         model.add(TimeDistributed(Dense(vocab_size)))
         model.add(Activation('softmax'))
         
-        model.compile(loss='categorical_crossentropy', optimizer=self.optimizer, metrics=['categorical_accuracy'])
+        model.compile(loss='binary_crossentropy', optimizer=self.optimizer, metrics=['categorical_accuracy'])
         print(model.summary())
         
         return model
@@ -120,11 +136,7 @@ class LanguageModelStrategy(Strategy):
     def merge_sentences(self, data):
         #data:      [n_stories, n_sentences]
         #return:    [n_stories]
-        tmp = np.apply_along_axis(lambda x: ' '.join(x), 1, data)
-        list_of_words = []
-        for s in tmp:
-            list_of_words.extend(s.split(" "))
-        return list_of_words
+        return np.apply_along_axis(lambda x: ' '.join(x), 1, data)
         
     def fit_tokenizer(self, stories):
         #stories:   [n_stories]
@@ -142,8 +154,8 @@ class LanguageModelStrategy(Strategy):
         return {v: k for k, v in map.items()}
         
     def embed_data(self, text_data, word_to_int):
-        return [word_to_int[w] for w in text_data if w in word_to_int ]
-        #return self.tokenizer.texts_to_sequences(text_data)
+        #return [word_to_int[w] for w in text_data if w in word_to_int ]
+        return self.tokenizer.texts_to_sequences(text_data)
         
     def pad_data(self, X, max_seq_size):
         start = time.time()
@@ -178,10 +190,9 @@ class LanguageModelStrategy(Strategy):
 
 class KerasBatchGenerator(object):
 
-    def __init__(self, data, num_steps, batch_size, vocabulary, skip_step=5):
+    def __init__(self, data, vocabulary, skip_step=5):
         self.data = data
-        self.num_steps = num_steps
-        self.batch_size = batch_size
+        #self.num_steps = num_steps
         self.vocabulary = vocabulary
         # this will track the progress of the batches sequentially through the
         # data set - once the data reaches the end of the data set it will reset
@@ -190,18 +201,46 @@ class KerasBatchGenerator(object):
         # skip_step is the number of words which will be skipped before the next
         # batch is skimmed from the data set
         self.skip_step = skip_step
-    
+        self.grouped_by_length = list(self.group_by_length(self.data).items())
+        self.preferred_batch_size = 32
+        self.n_batches = np.sum([math.ceil(len(v)/self.preferred_batch_size) for l,v in self.grouped_by_length])
+
+    def group_by_length(self, data):
+        dict = {}
+        for d in data:
+            if len(d) not in dict:
+                dict[len(d)] = []
+            dict[len(d)].append(d)
+        return dict
+
     def generate(self):
-        x = np.zeros((self.batch_size, self.num_steps))
-        y = np.zeros((self.batch_size, self.num_steps, self.vocabulary))
+
+        # print(np.average([len(x)/self.batch_size for l, x in grouped_by_length.items()]))
         while True:
-            for i in range(self.batch_size):
-                if self.current_idx + self.num_steps >= len(self.data):
-                    # reset the index back to the start of the data set
-                    self.current_idx = 0
-            x[i, :] = self.data[self.current_idx:self.current_idx + self.num_steps]
-            temp_y = self.data[self.current_idx + 1:self.current_idx + self.num_steps + 1]
-            # convert all of temp_y into a one hot representation
-            y[i, :, :] = to_categorical(temp_y, num_classes=self.vocabulary)
-            self.current_idx += self.skip_step
-            yield x, y
+
+            lg, l_data = self.grouped_by_length[self.current_idx]
+            batches = self.createBatch(l_data, self.preferred_batch_size)
+            self.current_idx = (self.current_idx + 1) % len(self.grouped_by_length)
+            for b in batches:
+                yield b[0], b[1]
+
+
+    def createBatch(self, data, pref_batch_size):
+        data = np.array(data)
+        num_batches = math.ceil(len(data)/pref_batch_size)
+        batches = []
+        for i in range(num_batches):
+            data_slice = data[i*pref_batch_size: (i+1)*pref_batch_size]
+            x_slice = data_slice[:,:-1]
+            tmp_y = data_slice[:,1:]
+            y_slice = to_categorical(tmp_y, num_classes=self.vocabulary)
+
+            batches.append((x_slice, y_slice))
+
+        return batches
+
+class PredictCallback(Callback):
+    def predict_on_batch_end(self, epoch, logs):
+        data = ['kelly', 'found', 'her', "grandmother's", 'pizza', 'recipe', 'in', 'a', 'of', 'memories', 'kelly', 'about', 'how', 'much', 'she', 'loved', 'her', "grandmother's", 'pizza', 'kelly', 'decided', 'that', 'she', 'was', 'going', 'to', 'try', 'to', 'make', 'pizza', 'kelly', 'studied', 'the', 'recipe', 'and', 'gathered', 'everything', 'she', 'needed', 'kelly', 'successfully', 'made', 'a', 'pizza', 'from', 'her', "grandmother's", 'recipe']
+
+        # self.model
