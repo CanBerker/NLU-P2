@@ -31,7 +31,7 @@ class LanguageModelStrategy(Strategy):
         self.dropout_rate = 0.5
         self.train_size = 0.8
         self.optimizer = Adam()
-        self.num_epochs = 200
+        self.num_epochs = 70
         self.save_path = "checkpoint/"
         self.glove_path = "glove.6B.50d.txt"
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
@@ -56,38 +56,41 @@ class LanguageModelStrategy(Strategy):
         
         # Load the embeddings of choice.
         word_to_emb, word_to_int, int_to_emb = load_glove(self.glove_path)
+        
+        train_x, validation_x = train_test_split(stories_tokenized, train_size = self.train_size)
+        
         # Reduce the embeddings to what you need only.
-        word_to_emb, word_to_int, int_to_emb = self.reduce_embedding(int_to_emb, word_to_int, word_to_emb, stories_tokenized)
+        word_to_emb, word_to_int, int_to_emb = self.reduce_embedding(int_to_emb, word_to_int, word_to_emb, train_x)
         
         # Embed our tokens with the reduced embedding
-        embedded_stories = embed_to_ints(stories_tokenized, word_to_int=word_to_int)
+        train_embedded = embed_to_ints(train_x, word_to_int=word_to_int)
+        valid_embedded = embed_to_ints(validation_x, word_to_int=word_to_int)
         
-        print("Example embedding:{}".format(embedded_stories[0]))
+        print("Example embedding:{}".format(self.int_to_words(self.inverse_map(word_to_int),valid_embedded)))
         
         # Build the LSTM LM with softmax
         embedding_matrix = np.array(int_to_emb)
         self.max_vocab, _ = embedding_matrix.shape
-        model = self.build_graph(np.array(embedding_matrix))
+        model = self.build_graph(embedding_matrix)
         
-        train_x, validation_x = train_test_split(embedded_stories, train_size = self.train_size)
-        
-        train_generator = KerasBatchGenerator(train_x,
+        train_generator = KerasBatchGenerator(train_embedded,
                                               self.max_vocab,
                                               skip_step=5)
-        valid_data_generator = KerasBatchGenerator(validation_x,
+        valid_data_generator = KerasBatchGenerator(valid_embedded,
                                                    self.max_vocab,
                                                    skip_step=5)
 
         checkpointer = ModelCheckpoint(filepath=self.save_path + '/model-{epoch:02d}.hdf5', verbose=1)
 
-        # model.fit_generator(train_generator.generate(),
-        #                     steps_per_epoch=train_generator.n_batches,#len(train_x) // (self.batch_size * self.max_seq_size),
-        #                     epochs=self.num_epochs,
-        #                     validation_data=valid_data_generator.generate(),
-        #                     validation_steps=1,#len(validation_x)//(self.batch_size) ,#len(validation_x)//(self.batch_size * self.max_seq_size),
-        #                     callbacks=[checkpointer]
-        #                     )
-        # self.test_model(train_x, int_to_word)
+        model.fit_generator(train_generator.generate(),
+                             steps_per_epoch=train_generator.n_batches,#len(train_x) // (self.batch_size * self.max_seq_size),
+                             epochs=self.num_epochs,
+                             validation_data=valid_data_generator.generate(),
+                             validation_steps=1,#len(validation_x)//(self.batch_size) ,#len(validation_x)//(self.batch_size * self.max_seq_size),
+                             callbacks=[checkpointer]
+                             )
+                             
+        self.test_model(valid_embedded, self.inverse_map(word_to_int))
 
     def reduce_embedding(self, int_to_emb, word_to_int, word_to_emb, tokens):
         
@@ -114,6 +117,10 @@ class LanguageModelStrategy(Strategy):
         r_word_to_int   = {w:i                                     for i, (w,c) in enumerate(sorted_unique_tokens)}
         r_int_to_emb    = [self.resolve(w, word_to_emb, emb_dim)   for i, (w,c) in enumerate(sorted_unique_tokens)]
         r_word_to_embed = {w:self.resolve(w, word_to_emb, emb_dim) for i, (w,c) in enumerate(sorted_unique_tokens)}
+        
+        r_word_to_int[self.oov_token] = len(sorted_unique_tokens)
+        r_word_to_embed[self.oov_token] = self.resolve(self.oov_token, word_to_emb, emb_dim)
+        r_int_to_emb.append(self.resolve(self.oov_token, word_to_emb, emb_dim))
         
         print("Total amount of tokens attempted:      {}".format(self.total_tried))
         print("Total amount of tokens failed to embed:{}".format(self.total_failed))
@@ -157,7 +164,7 @@ class LanguageModelStrategy(Strategy):
         pred_print_out = "Predicted words: "
         for i in range(num_predict):
             data = next(example_training_generator.generate())
-            prediction = model.predict(data[0])
+            prediction = model.predict_proba(data[0])
             predict_word = np.argmax(prediction,2)
             print("true_print_out=", self.int_to_words(reversed_dictionary, data[0]))
             print("pred_print_out=", self.int_to_words(reversed_dictionary, predict_word))

@@ -51,12 +51,9 @@ def convert_to_int(word, word_to_int):
     total += 1
     try:
         return word_to_int[word]
-    except:
-        if is_number(word):
-            return word_to_int['<number>']
-        else:        
-            unconverted += 1
-            return word_to_int['<unk>']
+    except:       
+        unconverted += 1
+        return word_to_int['<unk>']
 
 total = 0
 unconverted = 0
