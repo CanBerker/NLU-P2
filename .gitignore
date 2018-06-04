@@ -5,3 +5,4 @@ __pycache__/
 venv/
 *.h5
 *.npy
+glove.*

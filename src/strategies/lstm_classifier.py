@@ -29,10 +29,10 @@ class LSTMClassifierStrategy(Strategy):
         self.max_vocab = 10000
         self.oov_token = "<unk>"
         self.embedding_size = 100
-        self.hidden_size = 512
+        self.hidden_size = 128
         self.use_dropout = True
         self.dropout_rate = 0.5
-        self.train_size = 0.8
+        self.train_size = 0.9
         self.optimizer = Adam()
         self.num_epochs = 10
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
@@ -44,7 +44,7 @@ class LSTMClassifierStrategy(Strategy):
         _ = data[:,6]
         
         # Get full stories to train language model on.
-        full_stories = data[:,2:7]
+        full_stories = data[:,4:7]
         labels = data[:,7]
         
         # Paste sentences next to each other
@@ -94,11 +94,14 @@ class LSTMClassifierStrategy(Strategy):
                              validation_steps=valid_data_generator.n_batches,#len(validation_x)//(self.batch_size) ,#len(validation_x)//(self.batch_size * self.max_seq_size),
                              callbacks=[checkpointer]
                              )
+                             
+        self.model = model
                   
-        self.test_model(valid_embedded, validation_lab)
+       # self.test_model(valid_embedded, validation_lab)
 
     def reduce_embedding(self, int_to_emb, word_to_int, word_to_emb, tokens):
-        
+        #Takes in an embedding and takes out only what it needs (i.e. tokens)
+        print("-- Reducing embedding--")
         # All next to each other
         tokens = np.concatenate(tokens)
         
@@ -132,6 +135,7 @@ class LSTMClassifierStrategy(Strategy):
         print("---> {}%".format(self.total_failed/self.total_tried))
         print("Shape of new embedding:{}".format(np.array(r_int_to_emb).shape))
         
+        print("--Done reducing the embeddings--\n")
         return r_word_to_embed, r_word_to_int, r_int_to_emb
     
     def resolve(self, word, word_to_emb, emb_dim):
@@ -199,10 +203,12 @@ class LSTMClassifierStrategy(Strategy):
         vocab_size, embed_size = embedding_matrix.shape
         model = Sequential()
         model.add(Embedding(vocab_size, embed_size, weights=[embedding_matrix], trainable=False))
+        #model.add(LSTM(self.hidden_size,return_sequences=True))
         model.add(LSTM(self.hidden_size))
-        #model.add(LSTM(hidden_size, return_sequences=True))
         if self.use_dropout:
             model.add(Dropout(self.dropout_rate))
+        model.add(Dense(64))
+        model.add(Activation('sigmoid'))
         model.add(Dense(1))
         model.add(Activation('sigmoid'))
         
@@ -212,7 +218,26 @@ class LSTMClassifierStrategy(Strategy):
         return model
 
     def predict(self, data: np.ndarray) -> str:
-        return None
+        #Decompose data
+        #--> data[:,0] contains ID'sa
+        #--> data[:,1-5] contains first 4 sentences
+        #--> data[:,5-7] contains 2 ending options
+        IDs = data[:,0]
+        partial_stories = data[:,1:5]
+        endings = data[:,5:7]
+        
+        choices = []
+        for partial_story in partial_stories:
+            verdict = []
+            for ending in endings:
+                full = partial_story.append(ending)
+                pred = self.model.predict([full])
+                verdict.append(pred)
+            choice = np.argmax(verdict) + 1
+            choices.append(choice)
+                
+        
+        return choices
 
     def merge_sentences(self, data):
         #data:      [n_stories, n_sentences]

@@ -23,13 +23,13 @@ from utils.utils import convert_to_int, embed_to_ints
 class LanguageModelStrategy(Strategy):
 
     def fit(self, data: np.ndarray) -> None:
-        self.max_vocab = 1200000
+        self.max_vocab = 7000
         self.oov_token = "<unk>"
         self.embedding_size = 100
-        self.hidden_size = 512
+        self.hidden_size = 64
         self.use_dropout = True
         self.dropout_rate = 0.5
-        self.train_size = 0.9
+        self.train_size = 0.8
         self.optimizer = Adam()
         self.num_epochs = 100
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
@@ -105,6 +105,7 @@ class LanguageModelStrategy(Strategy):
         # Sort tokens by frequency
         sorted_unique_tokens = list(zip(unsorted_uniques, unsorted_counts))
         sorted_unique_tokens.sort(key=lambda t: t[1], reverse=True)
+        sorted_unique_tokens = sorted_unique_tokens[:self.max_vocab-1]
         
         _, emb_dim = np.array(int_to_emb).shape
         
@@ -133,7 +134,7 @@ class LanguageModelStrategy(Strategy):
             emb = word_to_emb[word]
         except:
             emb = np.random.rand(emb_dim)
-            print("Was not able to find an embedding for:{}".format(word))
+            #print("Was not able to find an embedding for:{}".format(word))
             self.total_failed +=1
         return emb
         
@@ -188,13 +189,13 @@ class LanguageModelStrategy(Strategy):
         model = Sequential()
         model.add(Embedding(vocab_size, embed_size, weights=[embedding_matrix], trainable=False))
         model.add(LSTM(self.hidden_size, return_sequences=True))
-        #model.add(LSTM(hidden_size, return_sequences=True))
+        #model.add(LSTM(self.hidden_size, return_sequences=True))
         if self.use_dropout:
             model.add(Dropout(self.dropout_rate))
-        model.add(TimeDistributed(Dense(vocab_size)))
+        model.add(Dense(vocab_size))
         model.add(Activation('softmax'))
         
-        model.compile(loss='binary_crossentropy', optimizer=self.optimizer, metrics=['categorical_accuracy'])
+        model.compile(loss='sparse_categorical_crossentropy', optimizer=self.optimizer, metrics=['sparse_categorical_accuracy'])
         print(model.summary())
         
         return model
@@ -286,12 +287,11 @@ class KerasBatchGenerator(object):
 
         # print(np.average([len(x)/self.batch_size for l, x in grouped_by_length.items()]))
         while True:
-
-            lg, l_data = self.grouped_by_length[self.current_idx]
-            batches = self.createBatch(l_data, self.preferred_batch_size)
-            self.current_idx = (self.current_idx + 1) % len(self.grouped_by_length)
-            for b in batches:
-                yield b[0], b[1]
+            for i in range(len(self.grouped_by_length)):
+                lg, l_data = self.grouped_by_length[i]
+                batches = self.createBatch(l_data, self.preferred_batch_size)
+                for b in batches:
+                    yield b[0], b[1]
 
 
     def createBatch(self, data, pref_batch_size):
@@ -301,9 +301,9 @@ class KerasBatchGenerator(object):
         for i in range(num_batches):
             data_slice = data[i*pref_batch_size: (i+1)*pref_batch_size]
             x_slice = data_slice[:,:-1]
-            tmp_y = data_slice[:,1:]
-            y_slice = to_categorical(tmp_y, num_classes=self.vocabulary)
+            y_slice = data_slice[:,1:]
+            #y_slice = to_categorical(y_slice, num_classes=self.vocabulary)
 
-            batches.append((x_slice, y_slice))
+            batches.append((x_slice, np.expand_dims(y_slice, -1)))
 
         return batches
