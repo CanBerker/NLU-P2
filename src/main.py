@@ -28,7 +28,7 @@ from data_augmentation import augment_data
 
 if __name__ == '__main__':
     train_data_loc = os.path.join(os.path.join(
-        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'train_small.csv')
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'train.csv')
     validation_data_loc = os.path.join(os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'validation.csv')
     glove_file = "glove.6B.50d.txt"
