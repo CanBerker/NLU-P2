@@ -3,6 +3,9 @@ import math
 import time
 
 import numpy as np
+import tensorflow as tf
+import keras
+
 from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint
 from keras.layers import Dense, Activation, Embedding, Dropout, TimeDistributed
@@ -32,8 +35,6 @@ class LSTMClassifierStrategy(Strategy):
         self.train_size = 0.8
         self.optimizer = Adam()
         self.num_epochs = 10
-        self.save_path = "checkpoint/"
-        self.glove_path = "glove.6B.50d.txt"
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
                 
         # Decompose data
@@ -191,6 +192,10 @@ class LSTMClassifierStrategy(Strategy):
 
     def build_graph(self, embedding_matrix):
         self.log("Building graph")
+        if (self.use_gpu):
+            config = tf.ConfigProto( device_count = {'GPU': 1 , 'CPU': 56} )
+            sess = tf.Session(config=config)
+            keras.backend.set_session(sess)
         vocab_size, embed_size = embedding_matrix.shape
         model = Sequential()
         model.add(Embedding(vocab_size, embed_size, weights=[embedding_matrix], trainable=False))

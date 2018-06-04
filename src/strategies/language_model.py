@@ -29,11 +29,9 @@ class LanguageModelStrategy(Strategy):
         self.hidden_size = 512
         self.use_dropout = True
         self.dropout_rate = 0.5
-        self.train_size = 0.8
+        self.train_size = 0.9
         self.optimizer = Adam()
-        self.num_epochs = 70
-        self.save_path = "checkpoint/"
-        self.glove_path = "glove.6B.50d.txt"
+        self.num_epochs = 100
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
         
         

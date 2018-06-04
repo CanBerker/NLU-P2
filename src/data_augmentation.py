@@ -19,7 +19,7 @@ def augment_data(X, ratio = 4, load=False):
         augmented_data = np.column_stack((augmented_data, random_endings))
         
         # save as npy binary
-        np.save(fname, augmented_data)
+        #np.save(fname, augmented_data)
         
     return augmented_data
 
