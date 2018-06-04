@@ -14,7 +14,8 @@ from scipy.spatial.distance import cosine
 class TopicConsistencyStrategy(Strategy):
     def fit(self, data: np.ndarray) -> None:
         
-        self.embedding_path = "glove.6B.50d.txt"
+        #self.embedding_path = "glove.6B.50d.txt"
+        self.embedding_path = self.glove_path
         self.word_representation = self.define_representation(data)
     
         self.log("There is no training for this.")

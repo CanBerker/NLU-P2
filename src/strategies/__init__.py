@@ -3,8 +3,11 @@ import numpy as np
 
 class Strategy(object):
 
-    def __init__(self, evaluator):
+    def __init__(self, evaluator, save_path, use_gpu, glove_path=None):
+        self.use_gpu = use_gpu
         self.evaluator = evaluator
+        self.glove_path = glove_path
+        self.save_path = save_path
 
     def fit(self, data: np.ndarray) -> None:
         raise NotImplementedError("Strategy not implemented.")
