@@ -23,13 +23,13 @@ from utils.utils import convert_to_int, embed_to_ints
 class LanguageModelStrategy(Strategy):
 
     def fit(self, data: np.ndarray) -> None:
-        self.max_vocab = 1200000
+        self.max_vocab = 10000
         self.oov_token = "<unk>"
         self.embedding_size = 100
-        self.hidden_size = 512
+        self.hidden_size = 256
         self.use_dropout = True
         self.dropout_rate = 0.5
-        self.train_size = 0.8
+        self.train_size = 0.9
         self.optimizer = Adam()
         self.num_epochs = 70
         self.save_path = "checkpoint/"
@@ -135,7 +135,7 @@ class LanguageModelStrategy(Strategy):
             emb = word_to_emb[word]
         except:
             emb = np.random.rand(emb_dim)
-            print("Was not able to find an embedding for:{}".format(word))
+            #print("Was not able to find an embedding for:{}".format(word))
             self.total_failed +=1
         return emb
         
@@ -190,13 +190,13 @@ class LanguageModelStrategy(Strategy):
         model = Sequential()
         model.add(Embedding(vocab_size, embed_size, weights=[embedding_matrix], trainable=False))
         model.add(LSTM(self.hidden_size, return_sequences=True))
-        #model.add(LSTM(hidden_size, return_sequences=True))
+        #model.add(LSTM(self.hidden_size, return_sequences=True))
         if self.use_dropout:
             model.add(Dropout(self.dropout_rate))
         model.add(TimeDistributed(Dense(vocab_size)))
         model.add(Activation('softmax'))
         
-        model.compile(loss='binary_crossentropy', optimizer=self.optimizer, metrics=['categorical_accuracy'])
+        model.compile(loss='categorical_crossentropy', optimizer=self.optimizer, metrics=['categorical_accuracy'])
         print(model.summary())
         
         return model
@@ -288,12 +288,11 @@ class KerasBatchGenerator(object):
 
         # print(np.average([len(x)/self.batch_size for l, x in grouped_by_length.items()]))
         while True:
-
-            lg, l_data = self.grouped_by_length[self.current_idx]
-            batches = self.createBatch(l_data, self.preferred_batch_size)
-            self.current_idx = (self.current_idx + 1) % len(self.grouped_by_length)
-            for b in batches:
-                yield b[0], b[1]
+            for i in range(len(self.grouped_by_length)):
+                lg, l_data = self.grouped_by_length[i]
+                batches = self.createBatch(l_data, self.preferred_batch_size)
+                for b in batches:
+                    yield b[0], b[1]
 
 
     def createBatch(self, data, pref_batch_size):

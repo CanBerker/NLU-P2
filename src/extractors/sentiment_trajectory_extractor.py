@@ -1,11 +1,12 @@
 import numpy as np
-import random
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from sklearn.ensemble import RandomForestClassifier as rf
 
-from strategies import Strategy
+from extractors import Extractor
 
-class EmbeddingClosenessStrategy(Strategy):
+class SentimentTrajectoryExtractor(Extractor):
+        
+    # Expects the training set, not augmented.
     def fit(self, data: np.ndarray) -> None:
     
         self.sentimentAnalyzer = SentimentIntensityAnalyzer()
@@ -31,35 +32,54 @@ class EmbeddingClosenessStrategy(Strategy):
         #___ Counting classifier       
         #Returns a [n_values, ..., n_values] where len(...) = len(story_grouping)
         self.counts = self.count_elements(trajectories, self.n_values, smoothing = 5)
+        #self.counts = self.counts / np.sum(self.counts)
+        #self.counts = self.counts - np.average(self.counts)
         #___ SVC classifier
         #self.classifier.fit(trajectories[:,:-1], trajectories[:,-1])
         #___
         
         pass
 
-    def predict(self, data: np.ndarray) -> str:
+    # All extractors expect the validation set
+    def extract(self, data: np.ndarray) -> str:
         #Decompose data
         #--> data[:,0] contains ID'sa
-        #--> data[:,1-5] contains first 4 sentences
-        #--> data[:,5-7] contains 2 ending options
+        #--> data[:,1] contains title
+        #--> data[:,2-6] contains first 4 sentences
+        #--> data[:,6] contains ending
+        #--> data[:,7] contains labels
         IDs = data[:,0]
-        partial_stories = data[:,5-(self.n_sentences-1):5]
-        endings = data[:,5:7]
+        titles = data[:,1]
+        partial_stories = data[:,6-(self.n_sentences-1):6]
+        endings = data[:,6]
+        full_stories = data[:,7-self.n_sentences:7]
+        
+        print(full_stories.shape)
+        print(endings.shape)
         
         # IMPORTANT: group test set exectly the same as when training otherwise 
         # nothing makes sense! Except for the last sentence which by definition
         # of test set cannot be in the grouping
-        partial_stories = self.group_stories(partial_stories,
-                                    self.story_grouping[:-1])
+        full_stories = self.group_stories(full_stories, self.story_grouping)
         
-        sentiment_for_endings = self.find_trajectories(endings)
-        sentiment_distributions = self.find_ending_distribution(partial_stories)
+        print(full_stories.shape)
         
-        endings_probabilities = self.map_probabilities(sentiment_for_endings, sentiment_distributions)
-                
-        # +1 to select sentence
-        return np.argmax(endings_probabilities, axis=1) + 1
+        sentiment_for_stories = self.find_trajectories(full_stories)
+        probability_for_trajectories = self.find_trajectory_prob(sentiment_for_stories)
+        
+        print(sentiment_for_stories)
+        print(probability_for_trajectories)
+        
+        #endings_probabilities = self.map_probabilities(sentiment_for_endings, sentiment_distributions)
+        
+        #print(np.array(endings_probabilities).shape)
+        
+        return probability_for_trajectories[:,np.newaxis]
 
+    def find_trajectory_prob(self, indices):
+        #Do some checking here cba atm
+        return np.array([self.counts[tuple(ind)] for ind in indices])
+        
     def map_probabilities(self, indices, distribution):
         #The one-liner to rule them all
         return [distr[indices] for (indices, distr) in list(zip(indices, distribution))]
@@ -126,4 +146,3 @@ class EmbeddingClosenessStrategy(Strategy):
             low_ind += group_size
         
         return np.array(grouped_data).T
-            
