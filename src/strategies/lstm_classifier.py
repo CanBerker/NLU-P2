@@ -26,14 +26,14 @@ class LSTMClassifierStrategy(Strategy):
     def fit(self, data: np.ndarray) -> None:
         self.oov_token = "<unk>"
         self.embedding_size = 100
-        self.hidden_size = 32
+        self.hidden_size = 64
         self.use_dropout = True
         self.train_size = 0.8
         self.dropout_rate = 0.5
         self.optimizer = Adam()
         self.num_epochs = 20
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
-                
+        self.glove_path = "glove.6B.50d.txt"
         # Decompose data
         _ = data[:,0]
         _ = data[:,1]
