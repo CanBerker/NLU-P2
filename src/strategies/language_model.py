@@ -34,7 +34,7 @@ class LanguageModelStrategy(Strategy):
         self.dropout_rate = 0.5
         self.train_size = 0.85
         self.optimizer = Adam()
-        self.num_epochs = 100
+        self.num_epochs = 1
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
         
         

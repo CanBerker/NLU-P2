@@ -29,12 +29,12 @@ class LSTMClassifierStrategy(Strategy):
         self.max_vocab = 10000
         self.oov_token = "<unk>"
         self.embedding_size = 100
-        self.hidden_size = 64
+        self.hidden_size = 32
         self.use_dropout = True
         self.train_size = 0.8
         self.dropout_rate = 0.5
         self.optimizer = Adam()
-        self.num_epochs = 10
+        self.num_epochs = 20
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
                 
         # Decompose data
@@ -74,30 +74,31 @@ class LSTMClassifierStrategy(Strategy):
         
         
         # Embed our tokens with the reduced embedding
-        train_embedded = embed_to_ints(train_x, word_to_int=self.word_to_int)
-        valid_embedded = embed_to_ints(validation_x, word_to_int=self.word_to_int)
+        #train_embedded = embed_to_ints(train_x, word_to_int=self.word_to_int)
+        #valid_embedded = embed_to_ints(validation_x, word_to_int=self.word_to_int)
         
         # Build the LSTM LM with softmax
-        embedding_matrix = np.array(self.int_to_emb)
-        self.max_vocab, _ = embedding_matrix.shape
-        model = self.build_graph(embedding_matrix)
+        #embedding_matrix = np.array(self.int_to_emb)
+        #self.max_vocab, _ = embedding_matrix.shape
+        #model = self.build_graph(embedding_matrix)
         
-        train_generator = KerasBatchGenerator(train_embedded,
-                                              train_lab)
-        valid_data_generator = KerasBatchGenerator(valid_embedded,
-                                                   validation_lab)
+        #train_generator = KerasBatchGenerator(train_embedded,
+        #                                      train_lab)
+        #valid_data_generator = KerasBatchGenerator(valid_embedded,
+        #                                           validation_lab)
 
-        checkpointer = ModelCheckpoint(filepath=self.save_path + '/model-{epoch:02d}.hdf5', verbose=1)
+        #checkpointer = ModelCheckpoint(filepath=self.save_path + '/model-{epoch:02d}.hdf5', verbose=1)
 
-        model.fit_generator(train_generator.generate(),
-                             steps_per_epoch=train_generator.n_batches,#len(train_x) // (self.batch_size * self.max_seq_size),
-                             epochs=self.num_epochs,
-                             validation_data=valid_data_generator.generate(),
-                             validation_steps=valid_data_generator.n_batches,#len(validation_x)//(self.batch_size) ,#len(validation_x)//(self.batch_size * self.max_seq_size),
-                             callbacks=[checkpointer]
-                             )
+        #model.fit_generator(train_generator.generate(),
+        #                     steps_per_epoch=train_generator.n_batches,#len(train_x) // (self.batch_size * self.max_seq_size),
+        #                     epochs=self.num_epochs,
+        #                     validation_data=valid_data_generator.generate(),
+        #                     validation_steps=valid_data_generator.n_batches,#len(validation_x)//(self.batch_size) ,#len(validation_x)//(self.batch_size * self.max_seq_size),
+        #                     callbacks=[checkpointer]
+        #                     )
                              
         self.model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
+        
         
         #self.test_model(valid_embedded, validation_lab)
 
@@ -210,9 +211,7 @@ class LSTMClassifierStrategy(Strategy):
         model.add(LSTM(self.hidden_size))
         if self.use_dropout:
             model.add(Dropout(self.dropout_rate))
-        model.add(Dense(32))
-        model.add(Activation('relu'))
-        model.add(Dense(16))
+        model.add(Dense(64))
         model.add(Activation('relu'))
         model.add(Dense(1))
         model.add(Activation('sigmoid'))
@@ -228,6 +227,7 @@ class LSTMClassifierStrategy(Strategy):
         #--> data[:,1-5] contains first 4 sentences
         #--> data[:,5-7] contains 2 ending options
         
+        print(self.model.summary())
         choices = []
         for partial_story in data:
             partial = partial_story[1:5]
@@ -247,6 +247,7 @@ class LSTMClassifierStrategy(Strategy):
             predictions = []
             for end in full_embed:
                 predictions.append(self.model.predict(np.array([end]))[0])
+                print(self.int_to_words(self.inverse_map(self.word_to_int), [end]))
             
             
             choice = np.argmax(predictions) + 1
@@ -322,7 +323,7 @@ class KerasBatchGenerator(object):
         
         # A list of tuples [(length, [(sample_of_size_length, label)])]
         self.grouped_by_length = list(self.group_by_length(self.data, self.labels).items())
-        self.preferred_batch_size = 32
+        self.preferred_batch_size =  42
         
         self.n_batches = np.sum([math.ceil(len(samples)/self.preferred_batch_size) for l, samples in self.grouped_by_length])
         print("Number of batches found:{}".format(self.n_batches))
