@@ -96,8 +96,8 @@ if __name__ == '__main__':
         #strategy = SentimentTrajectoryStrategy(SentimentTrajectoryEvaluator())
         #strategy = NBStrategy(PerDataPointEvaluator())
         #strategy = StylisticFeaturesStrategy(OnlyValidationDataEvaluator())
-        #strategy = LanguageModelStrategy(Evaluator(), args.spath, args.use_gpu, glove_file)
-        strategy = LSTMClassifierStrategy(Evaluator(), args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
+        strategy = LanguageModelStrategy(Evaluator(), args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
+        # strategy = LSTMClassifierStrategy(Evaluator(), args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
         #strategy = TopicConsistencyStrategy(Evaluator(), args.use_gpu)
     validation_error = strategy.evaluator.validation_error(strategy, all_data, validation_data)
 

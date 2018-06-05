@@ -1,12 +1,11 @@
 import math
-import math
 import time
 
 import numpy as np
 import tensorflow as tf
 import keras
+import nltk
 
-from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint
 from keras.layers import Dense, Activation, Embedding, Dropout, TimeDistributed
 from keras.layers import LSTM
@@ -16,7 +15,6 @@ from keras.initializers import Constant
 from keras.preprocessing.text import Tokenizer as tk
 from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
-import nltk
 
 from strategies import Strategy
 from utils.loader import load_glove
@@ -26,7 +24,6 @@ from utils.utils import convert_to_int, embed_to_ints
 class LSTMClassifierStrategy(Strategy):
 
     def fit(self, data: np.ndarray) -> None:
-        self.max_vocab = 10000
         self.oov_token = "<unk>"
         self.embedding_size = 100
         self.hidden_size = 32
@@ -54,18 +51,14 @@ class LSTMClassifierStrategy(Strategy):
 
         # Tokenize the data into tokens using the standard tokenizer
         stories_tokenized = self.tokenize_data(self.tokenizer, stories_strings)
-        
-        full_stories = None
-        stories_strings = None
-        
         # Load the embeddings of choice.
         word_to_emb, word_to_int, int_to_emb = load_glove(self.glove_path)
-        
+        # separate training and validation data
         train_x, validation_x, train_lab, validation_lab = train_test_split(stories_tokenized,
-                                            labels, train_size = self.train_size)
-                                            
-        self.log("--->Amount of training samples: {}".format(len(train_x)))
-        self.log("--->Amount of testing samples: {}".format(len(validation_x)))
+                                                                            labels, train_size = self.train_size)
+
+        self.log("Amount of training samples: {}".format(len(train_x)))
+        self.log("Amount of testing samples: {}".format(len(validation_x)))
         
         # Reduce the embeddings to what you need only.
         self.word_to_emb, self.word_to_int, self.int_to_emb = self.reduce_embedding(int_to_emb, word_to_int, word_to_emb, train_x)
@@ -79,6 +72,7 @@ class LSTMClassifierStrategy(Strategy):
         self.max_vocab, _ = embedding_matrix.shape
         self.model = self.build_graph(embedding_matrix)
 
+        # Define data generators
         train_generator = KerasBatchGenerator(train_embedded, train_lab)
         valid_data_generator = KerasBatchGenerator(valid_embedded, validation_lab)
 
@@ -101,7 +95,7 @@ class LSTMClassifierStrategy(Strategy):
 
     def reduce_embedding(self, int_to_emb, word_to_int, word_to_emb, tokens):
         #Takes in an embedding and takes out only what it needs (i.e. tokens)
-        print("-- Reducing embedding--")
+        self.log("-- Reducing embedding--")
         # All next to each other
         tokens = np.concatenate(tokens)
         
@@ -109,8 +103,8 @@ class LSTMClassifierStrategy(Strategy):
         unsorted_uniques, unsorted_counts = np.unique(tokens, return_counts = True)
         
         # print Some stuff
-        print("Average token frequency:{}".format(np.average(unsorted_counts)))
-        print("Total amount of unique tokens:{}".format(len(unsorted_uniques)))
+        self.log("Average token frequency:{}".format(np.average(unsorted_counts)))
+        self.log("Total amount of unique tokens:{}".format(len(unsorted_uniques)))
         
         # Sort tokens by frequency
         sorted_unique_tokens = list(zip(unsorted_uniques, unsorted_counts))
@@ -130,13 +124,13 @@ class LSTMClassifierStrategy(Strategy):
         r_word_to_int[self.oov_token] = len(sorted_unique_tokens)
         r_word_to_embed[self.oov_token] = self.resolve(self.oov_token, word_to_emb, emb_dim)
         r_int_to_emb.append(self.resolve(self.oov_token, word_to_emb, emb_dim))
-        
-        print("Total amount of tokens attempted:      {}".format(self.total_tried))
-        print("Total amount of tokens failed to embed:{}".format(self.total_failed))
-        print("---> {}%".format(self.total_failed/self.total_tried))
-        print("Shape of new embedding:{}".format(np.array(r_int_to_emb).shape))
-        
-        print("--Done reducing the embeddings--\n")
+
+        self.log("Total amount of tokens attempted:      {}".format(self.total_tried))
+        self.log("Total amount of tokens failed to embed:{}".format(self.total_failed))
+        self.log("---> {}%".format(self.total_failed/self.total_tried))
+        self.log("Shape of new embedding:{}".format(np.array(r_int_to_emb).shape))
+
+        self.log("--Done reducing the embeddings--\n")
         return r_word_to_embed, r_word_to_int, r_int_to_emb
     
     def resolve(self, word, word_to_emb, emb_dim):
@@ -328,10 +322,9 @@ class KerasBatchGenerator(object):
     def group_by_length(self, data, labels):
         #Gets a dict that maps: length --> collection or tuples (sample, label)
         dict = {}
-        
         if len(data) != len(labels):
-            print("----------------------:fhgjklmsdfgklmjsdfg-----------------")
-            
+            self.log("ERROR: More data than labels. len(data)={0} len(labels)={1}".format(len(data), len(labels)))
+
         for i in range(len(data)):
             sample = data[i]
             lab = labels[i]
