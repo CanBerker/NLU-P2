@@ -33,7 +33,7 @@ class LSTMClassifierStrategy(Strategy):
         self.optimizer = Adam()
         self.num_epochs = 20
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
-        self.glove_path = "glove.6B.50d.txt"
+
         # Decompose data
         _ = data[:,0]
         _ = data[:,1]
