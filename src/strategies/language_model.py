@@ -215,7 +215,7 @@ class LanguageModelStrategy(Strategy):
     def merge_sentences(self, data):
         #data:      [n_stories, n_sentences]
         #return:    [n_stories]
-        return np.apply_along_axis(lambda x: ' '.join(x), 1, data)
+        return np.array([' '.join(x) for x in data])
         
     def fit_tokenizer(self, stories):
         #stories:   [n_stories]
@@ -224,7 +224,6 @@ class LanguageModelStrategy(Strategy):
         
      
     def get_int_mappings(self):
-        
         word_to_int  = self.tokenizer.word_index
         int_to_word  = self.inverse_map(word_to_int)
         return word_to_int, int_to_word

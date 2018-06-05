@@ -65,8 +65,8 @@ class LSTMClassifierStrategy(Strategy):
         train_x, validation_x, train_lab, validation_lab = train_test_split(stories_tokenized,
                                             labels, train_size = self.train_size)
                                             
-        print("--->Amount of training samples: {}".format(len(train_x)))
-        print("--->Amount of testing samples: {}".format(len(validation_x)))
+        self.log("--->Amount of training samples: {}".format(len(train_x)))
+        self.log("--->Amount of testing samples: {}".format(len(validation_x)))
         
         # Reduce the embeddings to what you need only.
         self.word_to_emb, self.word_to_int, self.int_to_emb = self.reduce_embedding(int_to_emb, word_to_int, word_to_emb, train_x)
@@ -80,26 +80,26 @@ class LSTMClassifierStrategy(Strategy):
         # Build the LSTM LM with softmax
         embedding_matrix = np.array(self.int_to_emb)
         self.max_vocab, _ = embedding_matrix.shape
-        model = self.build_graph(embedding_matrix)
-        
-        train_generator = KerasBatchGenerator(train_embedded,
-                                              train_lab)
-        valid_data_generator = KerasBatchGenerator(valid_embedded,
-                                                   validation_lab)
+        self.model = self.build_graph(embedding_matrix)
 
-        checkpointer = ModelCheckpoint(filepath=self.save_path + '/model-{epoch:02d}.hdf5', verbose=1)
+        train_generator = KerasBatchGenerator(train_embedded, train_lab)
+        valid_data_generator = KerasBatchGenerator(valid_embedded, validation_lab)
 
-        model.fit_generator(train_generator.generate(),
+        model_save_name = '/model-{epoch:02d}.hdf5'
+        if self.continue_training:
+            self.log("Loading model from {}".format(self.model_path))
+            self.model = load_model(self.model_path)
+            model_save_name = '/model-cont-{epoch:02d}.hdf5'
+
+        checkpointer = ModelCheckpoint(filepath=self.save_path + model_save_name, verbose=1)
+
+        self.model.fit_generator(train_generator.generate(),
                              steps_per_epoch=train_generator.n_batches,#len(train_x) // (self.batch_size * self.max_seq_size),
                              epochs=self.num_epochs,
                              validation_data=valid_data_generator.generate(),
                              validation_steps=valid_data_generator.n_batches,#len(validation_x)//(self.batch_size) ,#len(validation_x)//(self.batch_size * self.max_seq_size),
                              callbacks=[checkpointer]
                              )
-                             
-        self.model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
-        
-        #self.test_model(valid_embedded, validation_lab)
 
     def reduce_embedding(self, int_to_emb, word_to_int, word_to_emb, tokens):
         #Takes in an embedding and takes out only what it needs (i.e. tokens)
@@ -258,7 +258,7 @@ class LSTMClassifierStrategy(Strategy):
     def merge_sentences(self, data):
         #data:      [n_stories, n_sentences]
         #return:    [n_stories]
-        return np.apply_along_axis(lambda x: ' '.join(x), 1, data)
+        return np.array([' '.join(x) for x in data])
         
     def fit_tokenizer(self, stories):
         #stories:   [n_stories]

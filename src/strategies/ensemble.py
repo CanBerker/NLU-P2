@@ -8,7 +8,7 @@ from extractors.sentiment_trajectory_extractor import SentimentTrajectoryExtract
 from extractors.embedded_closeness_extractor import EmbeddedClosenessExtractor
 from sklearn.linear_model import LogisticRegression as lr
 class EnsembleStrategy(Strategy):
-        
+
     # Expects an Augmented training set.
     def fit(self, train: np.ndarray, val: np.ndarray, aug: np.ndarray) -> None:
         sentiment = SentimentTrajectoryExtractor()
