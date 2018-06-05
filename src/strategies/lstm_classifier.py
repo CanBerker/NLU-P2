@@ -28,13 +28,13 @@ class LSTMClassifierStrategy(Strategy):
     def fit(self, data: np.ndarray) -> None:
         self.max_vocab = 10000
         self.oov_token = "<unk>"
-        self.embedding_size = 100
-        self.hidden_size = 64
+        self.embedding_size = 50
+        self.hidden_size = 128
         self.use_dropout = True
-        self.train_size = 0.8
+        self.train_size = 0.9
         self.dropout_rate = 0.5
         self.optimizer = Adam()
-        self.num_epochs = 10
+        self.num_epochs = 20
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
                 
         # Decompose data
@@ -87,7 +87,7 @@ class LSTMClassifierStrategy(Strategy):
         valid_data_generator = KerasBatchGenerator(valid_embedded,
                                                    validation_lab)
 
-        checkpointer = ModelCheckpoint(filepath=self.save_path + '/model-{epoch:02d}.hdf5', verbose=1)
+        checkpointer = ModelCheckpoint(filepath=self.save_path + '/model-{epoch:02d}.hdf5', verbose=0)
 
         model.fit_generator(train_generator.generate(),
                              steps_per_epoch=train_generator.n_batches,#len(train_x) // (self.batch_size * self.max_seq_size),
@@ -97,7 +97,6 @@ class LSTMClassifierStrategy(Strategy):
                              callbacks=[checkpointer]
                              )
                              
-        self.model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
         
         #self.test_model(valid_embedded, validation_lab)
 
@@ -212,7 +211,7 @@ class LSTMClassifierStrategy(Strategy):
             model.add(Dropout(self.dropout_rate))
         model.add(Dense(32))
         model.add(Activation('relu'))
-        model.add(Dense(16))
+        model.add(Dense(64))
         model.add(Activation('relu'))
         model.add(Dense(1))
         model.add(Activation('sigmoid'))
@@ -228,6 +227,7 @@ class LSTMClassifierStrategy(Strategy):
         #--> data[:,1-5] contains first 4 sentences
         #--> data[:,5-7] contains 2 ending options
         
+        self.model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
         choices = []
         for partial_story in data:
             partial = partial_story[1:5]
