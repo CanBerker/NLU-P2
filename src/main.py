@@ -102,4 +102,4 @@ if __name__ == '__main__':
     validation_error = strategy.evaluator.validation_error(strategy, all_data, validation_data)
 
     #validation_error = Evaluator.validation_error(strategy, train_data, validation_data)
-    print('Validation error: {}'.format(validation_error))
+    print('\nValidation error: {}'.format(validation_error))
