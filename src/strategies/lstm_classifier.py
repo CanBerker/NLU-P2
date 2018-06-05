@@ -29,14 +29,14 @@ class LSTMClassifierStrategy(Strategy):
         self.max_vocab = 10000
         self.oov_token = "<unk>"
         self.embedding_size = 100
-        self.hidden_size = 128
+        self.hidden_size = 64
         self.use_dropout = True
         self.dropout_rate = 0.5
         self.train_size = 0.9
         self.optimizer = Adam()
         self.num_epochs = 10
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
-                
+        self.glove_path = "glove.6B.50d.txt"
         # Decompose data
         _ = data[:,0]
         _ = data[:,1]
@@ -203,12 +203,12 @@ class LSTMClassifierStrategy(Strategy):
         vocab_size, embed_size = embedding_matrix.shape
         model = Sequential()
         model.add(Embedding(vocab_size, embed_size, weights=[embedding_matrix], trainable=False))
-        #model.add(LSTM(self.hidden_size,return_sequences=True))
+        model.add(LSTM(self.hidden_size,return_sequences=True))
         model.add(LSTM(self.hidden_size))
         if self.use_dropout:
             model.add(Dropout(self.dropout_rate))
         model.add(Dense(64))
-        model.add(Activation('sigmoid'))
+        model.add(Activation('relu'))
         model.add(Dense(1))
         model.add(Activation('sigmoid'))
         
