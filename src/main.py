@@ -23,14 +23,15 @@ from strategies.language_model import LanguageModelStrategy
 from strategies.topic_consistency import TopicConsistencyStrategy
 from strategies.lstm_classifier import LSTMClassifierStrategy
 from strategies.ensemble import EnsembleStrategy
+
 from data_augmentation import augment_data
 
 
 if __name__ == '__main__':
-    np.random.seed(42)
+    np.random.seed(135511)
     
     train_data_loc = os.path.join(os.path.join(
-        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'train.csv')
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'train_small.csv')
     validation_data_loc = os.path.join(os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'validation.csv')
     glove_file = "glove.6B.50d.txt"
@@ -84,8 +85,9 @@ if __name__ == '__main__':
     #strategy = StylisticFeaturesStrategy(OnlyValidationDataEvaluator())
 
     #strategy = LanguageModelStrategy(Evaluator(), args.spath, args.use_gpu, glove_file)
-    strategy = LSTMClassifierStrategy(Evaluator(), save_path, args.use_gpu, glove_file)
+    #strategy = LSTMClassifierStrategy(Evaluator(), save_path, args.use_gpu, glove_file)
     #strategy = TopicConsistencyStrategy(Evaluator(), args.use_gpu)
-    validation_error = strategy.evaluator.validation_error(strategy, all_data, validation_data)
+    strategy = EnsembleStrategy(EnsembleEvaluator(), save_path, args.use_gpu, glove_file)
+    validation_error = strategy.evaluator.validation_error(strategy, train_data, validation_data, all_data)
     #validation_error = Evaluator.validation_error(strategy, train_data, validation_data)
     print('Validation error: {}'.format(validation_error))

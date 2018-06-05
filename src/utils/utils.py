@@ -54,7 +54,7 @@ def convert_to_int(word, word_to_int):
         return word_to_int[word]
     except:       
         unconverted += 1
-        print("Couldn't convert: {}".format(word))
+        #print("Couldn't convert: {}".format(word))
         return word_to_int['<unk>']
 
 total = 0
