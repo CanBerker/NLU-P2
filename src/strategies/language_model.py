@@ -3,6 +3,9 @@ import math
 import time
 
 import numpy as np
+import tensorflow as tf
+import keras
+
 from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint
 from keras.layers import Dense, Activation, Embedding, Dropout, TimeDistributed
@@ -23,13 +26,13 @@ from utils.utils import convert_to_int, embed_to_ints
 class LanguageModelStrategy(Strategy):
 
     def fit(self, data: np.ndarray) -> None:
-        self.max_vocab = 7000
+        self.max_vocab = 5000
         self.oov_token = "<unk>"
         self.embedding_size = 100
-        self.hidden_size = 64
+        self.hidden_size = 100
         self.use_dropout = True
         self.dropout_rate = 0.5
-        self.train_size = 0.8
+        self.train_size = 0.85
         self.optimizer = Adam()
         self.num_epochs = 100
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
@@ -84,7 +87,7 @@ class LanguageModelStrategy(Strategy):
                              steps_per_epoch=train_generator.n_batches,#len(train_x) // (self.batch_size * self.max_seq_size),
                              epochs=self.num_epochs,
                              validation_data=valid_data_generator.generate(),
-                             validation_steps=1,#len(validation_x)//(self.batch_size) ,#len(validation_x)//(self.batch_size * self.max_seq_size),
+                             validation_steps=valid_data_generator.n_batches,
                              callbacks=[checkpointer]
                              )
                              
@@ -185,6 +188,12 @@ class LanguageModelStrategy(Strategy):
 
     def build_graph(self, embedding_matrix):
         self.log("Building graph")
+        if (self.use_gpu):
+            self.log("Using GPU!")
+            config = tf.ConfigProto( device_count = {'GPU': 1 , 'CPU': 56} )
+            sess = tf.Session(config=config)
+            keras.backend.set_session(sess)
+        vocab_size, embed_size = embedding_matrix.shape
         vocab_size, embed_size = embedding_matrix.shape
         model = Sequential()
         model.add(Embedding(vocab_size, embed_size, weights=[embedding_matrix], trainable=False))
@@ -272,7 +281,8 @@ class KerasBatchGenerator(object):
         # batch is skimmed from the data set
         self.skip_step = skip_step
         self.grouped_by_length = list(self.group_by_length(self.data).items())
-        self.preferred_batch_size = 32
+        self.preferred_batch_size = 64
+        #self.preferred_batch_size = 32
         self.n_batches = np.sum([math.ceil(len(v)/self.preferred_batch_size) for l,v in self.grouped_by_length])
 
     def group_by_length(self, data):
