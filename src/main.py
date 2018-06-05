@@ -27,6 +27,8 @@ from data_augmentation import augment_data
 
 
 if __name__ == '__main__':
+    np.random.seed(42)
+    
     train_data_loc = os.path.join(os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'train.csv')
     validation_data_loc = os.path.join(os.path.join(
@@ -81,8 +83,8 @@ if __name__ == '__main__':
     #strategy = NBStrategy(PerDataPointEvaluator())
     #strategy = StylisticFeaturesStrategy(OnlyValidationDataEvaluator())
 
-    strategy = LanguageModelStrategy(Evaluator(), args.spath, args.use_gpu, glove_file)
-    #strategy = LSTMClassifierStrategy(Evaluator(), args.use_gpu, glove_file)
+    #strategy = LanguageModelStrategy(Evaluator(), args.spath, args.use_gpu, glove_file)
+    strategy = LSTMClassifierStrategy(Evaluator(), save_path, args.use_gpu, glove_file)
     #strategy = TopicConsistencyStrategy(Evaluator(), args.use_gpu)
     validation_error = strategy.evaluator.validation_error(strategy, all_data, validation_data)
     #validation_error = Evaluator.validation_error(strategy, train_data, validation_data)
