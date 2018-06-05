@@ -217,7 +217,9 @@ class LSTMClassifierStrategy(Strategy):
         #--> data[:,0] contains ID'sa
         #--> data[:,1-5] contains first 4 sentences
         #--> data[:,5-7] contains 2 ending options
-        
+        # TODO this should read from self.model_path if available
+        self.model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
+
         print(self.model.summary())
         choices = []
         for partial_story in data:

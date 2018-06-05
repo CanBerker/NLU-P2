@@ -213,6 +213,8 @@ class LanguageModelStrategy(Strategy):
         return model
 
     def predict(self, data: np.ndarray) -> str:
+        # TODO this should read from self.model_path if available
+        self.model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
         return None
 
     def merge_sentences(self, data):
