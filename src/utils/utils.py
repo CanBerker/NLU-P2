@@ -49,17 +49,23 @@ def inverse_map(mp):
 def convert_to_int(word, word_to_int):
     global total, unconverted
     total += 1
+    
     try:
         return word_to_int[word]
     except:       
         unconverted += 1
+        print("Couldn't convert: {}".format(word))
         return word_to_int['<unk>']
 
 total = 0
 unconverted = 0
 
-def embed_to_ints(X, word_to_int):
+def embed_to_ints(X, word_to_int, verbose=False):
+    
     global total, unconverted
+    
+    total = 0
+    unconverted = 0
     start = time.time()
     print("--starting to embed--")
     embedded = []
@@ -67,8 +73,9 @@ def embed_to_ints(X, word_to_int):
         embedded_s = [convert_to_int(w, word_to_int) for w in sentence]
         embedded.append(embedded_s)
     end = time.time()
-    print("--done embedding-- {0}".format(end-start))
-    print("---->Words not embedded: {0}%".format(unconverted/total))
+    if verbose:
+        print("--done embedding-- {0}".format(end-start))
+        print("---->Words not embedded: {0}%".format(unconverted/total))
     return embedded
     
 def get_batches(X, y, batch_size):

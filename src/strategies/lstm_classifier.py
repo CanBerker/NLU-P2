@@ -29,10 +29,10 @@ class LSTMClassifierStrategy(Strategy):
         self.max_vocab = 10000
         self.oov_token = "<unk>"
         self.embedding_size = 100
-        self.hidden_size = 128
+        self.hidden_size = 64
         self.use_dropout = True
+        self.train_size = 0.8
         self.dropout_rate = 0.5
-        self.train_size = 0.9
         self.optimizer = Adam()
         self.num_epochs = 10
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
@@ -44,7 +44,7 @@ class LSTMClassifierStrategy(Strategy):
         _ = data[:,6]
         
         # Get full stories to train language model on.
-        full_stories = data[:,4:7]
+        full_stories = data[:,2:7]
         labels = data[:,7]
         
         # Paste sentences next to each other
@@ -69,14 +69,16 @@ class LSTMClassifierStrategy(Strategy):
         print("--->Amount of testing samples: {}".format(len(validation_x)))
         
         # Reduce the embeddings to what you need only.
-        word_to_emb, word_to_int, int_to_emb = self.reduce_embedding(int_to_emb, word_to_int, word_to_emb, train_x)
+        self.word_to_emb, self.word_to_int, self.int_to_emb = self.reduce_embedding(int_to_emb, word_to_int, word_to_emb, train_x)
+        
+        
         
         # Embed our tokens with the reduced embedding
-        train_embedded = embed_to_ints(train_x, word_to_int=word_to_int)
-        valid_embedded = embed_to_ints(validation_x, word_to_int=word_to_int)
+        train_embedded = embed_to_ints(train_x, word_to_int=self.word_to_int)
+        valid_embedded = embed_to_ints(validation_x, word_to_int=self.word_to_int)
         
         # Build the LSTM LM with softmax
-        embedding_matrix = np.array(int_to_emb)
+        embedding_matrix = np.array(self.int_to_emb)
         self.max_vocab, _ = embedding_matrix.shape
         model = self.build_graph(embedding_matrix)
         
@@ -95,9 +97,9 @@ class LSTMClassifierStrategy(Strategy):
                              callbacks=[checkpointer]
                              )
                              
-        self.model = model
-                  
-       # self.test_model(valid_embedded, validation_lab)
+        self.model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
+        
+        #self.test_model(valid_embedded, validation_lab)
 
     def reduce_embedding(self, int_to_emb, word_to_int, word_to_emb, tokens):
         #Takes in an embedding and takes out only what it needs (i.e. tokens)
@@ -115,6 +117,7 @@ class LSTMClassifierStrategy(Strategy):
         # Sort tokens by frequency
         sorted_unique_tokens = list(zip(unsorted_uniques, unsorted_counts))
         sorted_unique_tokens.sort(key=lambda t: t[1], reverse=True)
+        sorted_unique_tokens = sorted_unique_tokens[:self.max_vocab-1]
         
         _, emb_dim = np.array(int_to_emb).shape
         
@@ -203,12 +206,14 @@ class LSTMClassifierStrategy(Strategy):
         vocab_size, embed_size = embedding_matrix.shape
         model = Sequential()
         model.add(Embedding(vocab_size, embed_size, weights=[embedding_matrix], trainable=False))
-        #model.add(LSTM(self.hidden_size,return_sequences=True))
+        model.add(LSTM(self.hidden_size,return_sequences=True))
         model.add(LSTM(self.hidden_size))
         if self.use_dropout:
             model.add(Dropout(self.dropout_rate))
-        model.add(Dense(64))
-        model.add(Activation('sigmoid'))
+        model.add(Dense(32))
+        model.add(Activation('relu'))
+        model.add(Dense(16))
+        model.add(Activation('relu'))
         model.add(Dense(1))
         model.add(Activation('sigmoid'))
         
@@ -222,21 +227,32 @@ class LSTMClassifierStrategy(Strategy):
         #--> data[:,0] contains ID'sa
         #--> data[:,1-5] contains first 4 sentences
         #--> data[:,5-7] contains 2 ending options
-        IDs = data[:,0]
-        partial_stories = data[:,1:5]
-        endings = data[:,5:7]
         
         choices = []
-        for partial_story in partial_stories:
-            verdict = []
-            for ending in endings:
-                full = partial_story.append(ending)
-                pred = self.model.predict([full])
-                verdict.append(pred)
-            choice = np.argmax(verdict) + 1
+        for partial_story in data:
+            partial = partial_story[1:5]
+            endings = partial_story[5:7]
+                        
+            full_stories = [np.append(partial, end) for end in endings]
+            
+            full_stories = self.merge_sentences(full_stories)            
+            
+            full_stories = self.clean_strings([lambda x: x.lower(),
+                                              lambda x: x.replace(".", " . ")],full_stories)
+            
+            full_stories = self.tokenize_data(self.tokenizer, full_stories)
+            full_embed = np.array(embed_to_ints(full_stories, self.word_to_int))
+            
+            
+            predictions = []
+            for end in full_embed:
+                predictions.append(self.model.predict(np.array([end]))[0])
+            
+            
+            choice = np.argmax(predictions) + 1
+            print(predictions, choice)
             choices.append(choice)
-                
-        
+            
         return choices
 
     def merge_sentences(self, data):
