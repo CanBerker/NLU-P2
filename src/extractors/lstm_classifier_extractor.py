@@ -1,11 +1,12 @@
 import math
+import math
 import time
 
 import numpy as np
 import tensorflow as tf
 import keras
-import nltk
 
+from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint
 from keras.layers import Dense, Activation, Embedding, Dropout, TimeDistributed
 from keras.layers import LSTM
@@ -15,25 +16,31 @@ from keras.initializers import Constant
 from keras.preprocessing.text import Tokenizer as tk
 from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
+import nltk
 
-from strategies import Strategy
+from extractors import Extractor
 from utils.loader import load_glove
 from utils.utils import convert_to_int, embed_to_ints
 
 
-class LSTMClassifierStrategy(Strategy):
+class LSTMClassifierExtractor(Extractor):
+
+    def __init__(self, glove_path, save_path):
+        self.glove_path = glove_path
+        self.save_path = save_path
 
     def fit(self, data: np.ndarray) -> None:
+        self.max_vocab = 10000
         self.oov_token = "<unk>"
-        self.embedding_size = 50
-        self.hidden_size = 128
+        self.embedding_size = 100
+        self.hidden_size = 32
         self.use_dropout = True
-        self.train_size = 0.9
+        self.train_size = 0.8
         self.dropout_rate = 0.5
         self.optimizer = Adam()
         self.num_epochs = 20
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
-
+                
         # Decompose data
         _ = data[:,0]
         _ = data[:,1]
@@ -45,56 +52,95 @@ class LSTMClassifierStrategy(Strategy):
         labels = data[:,7]
         
         # Paste sentences next to each other
+        
         stories_strings = self.merge_sentences(full_stories)
         stories_strings = self.clean_strings([lambda x: x.lower(),
                                               lambda x: x.replace(".", " . ")],stories_strings)
-
+        
+        
         # Tokenize the data into tokens using the standard tokenizer
         stories_tokenized = self.tokenize_data(self.tokenizer, stories_strings)
+        
+        full_stories = None
+        stories_strings = None
+        
         # Load the embeddings of choice.
         word_to_emb, word_to_int, int_to_emb = load_glove(self.glove_path)
-        # separate training and validation data
+        
         train_x, validation_x, train_lab, validation_lab = train_test_split(stories_tokenized,
-                                                                            labels, train_size = self.train_size)
-
-        self.log("Amount of training samples: {}".format(len(train_x)))
-        self.log("Amount of testing samples: {}".format(len(validation_x)))
+                                            labels, train_size = self.train_size)
+                                            
+        print("--->Amount of training samples: {}".format(len(train_x)))
+        print("--->Amount of testing samples: {}".format(len(validation_x)))
         
         # Reduce the embeddings to what you need only.
         self.word_to_emb, self.word_to_int, self.int_to_emb = self.reduce_embedding(int_to_emb, word_to_int, word_to_emb, train_x)
-
+        
+        
+        
         # Embed our tokens with the reduced embedding
-        train_embedded = embed_to_ints(train_x, word_to_int=self.word_to_int)
-        valid_embedded = embed_to_ints(validation_x, word_to_int=self.word_to_int)
-
+        #train_embedded = embed_to_ints(train_x, word_to_int=self.word_to_int)
+        #valid_embedded = embed_to_ints(validation_x, word_to_int=self.word_to_int)
+        
         # Build the LSTM LM with softmax
-        embedding_matrix = np.array(self.int_to_emb)
-        self.max_vocab, _ = embedding_matrix.shape
-        self.model = self.build_graph(embedding_matrix)
+        #embedding_matrix = np.array(self.int_to_emb)
+        #self.max_vocab, _ = embedding_matrix.shape
+        #model = self.build_graph(embedding_matrix)
+        
+        #train_generator = KerasBatchGenerator(train_embedded,
+        #                                      train_lab)
+        #valid_data_generator = KerasBatchGenerator(valid_embedded,
+        #                                           validation_lab)
 
-        # Define data generators
-        train_generator = KerasBatchGenerator(train_embedded, train_lab)
-        valid_data_generator = KerasBatchGenerator(valid_embedded, validation_lab)
+        #checkpointer = ModelCheckpoint(filepath=self.save_path + '/model-{epoch:02d}.hdf5', verbose=1)
 
-        model_save_name = '/model-{epoch:02d}.hdf5'
-        if self.continue_training:
-            self.log("Loading model from {}".format(self.model_path))
-            self.model = load_model(self.model_path)
-            model_save_name = '/model-cont-{epoch:02d}.hdf5'
-
-        checkpointer = ModelCheckpoint(filepath=self.save_path + model_save_name, verbose=1)
-
-        self.model.fit_generator(train_generator.generate(),
-                             steps_per_epoch=train_generator.n_batches,#len(train_x) // (self.batch_size * self.max_seq_size),
-                             epochs=self.num_epochs,
-                             validation_data=valid_data_generator.generate(),
-                             validation_steps=valid_data_generator.n_batches,#len(validation_x)//(self.batch_size) ,#len(validation_x)//(self.batch_size * self.max_seq_size),
-                             callbacks=[checkpointer]
-                             )
-
+        #model.fit_generator(train_generator.generate(),
+        #                     steps_per_epoch=train_generator.n_batches,#len(train_x) // (self.batch_size * self.max_seq_size),
+        #                     epochs=self.num_epochs,
+        #                     validation_data=valid_data_generator.generate(),
+        #                     validation_steps=valid_data_generator.n_batches,#len(validation_x)//(self.batch_size) ,#len(validation_x)//(self.batch_size * self.max_seq_size),
+        #                     callbacks=[checkpointer]
+        #                     )
+                             
+        self.model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
+        
+        
+        #self.test_model(valid_embedded, validation_lab)
+    
+    def extract(self, data: np.ndarray) -> str:
+        #Decompose data
+        #--> data[:,0] contains ID'sa
+        #--> data[:,1-5] contains first 4 sentences
+        #--> data[:,5-7] contains 2 ending options
+        
+        IDs = data[:,0]
+        titles = data[:,1]
+        full_stories = data[:,2:7]
+                
+        #Paste
+        full_stories = self.merge_sentences(full_stories) 
+        
+        full_stories = self.clean_strings([lambda x: x.lower(),
+                                           lambda x: x.replace(".", " . "),
+                                           ],
+                                           full_stories)
+                                           
+        full_stories = self.tokenize_data(self.tokenizer, full_stories)
+        print(full_stories[5])
+        full_embed = np.array(embed_to_ints(full_stories, self.word_to_int))
+        
+        feats = []
+        for sample in full_embed:            
+            sample = np.array(sample)
+            feats.append(self.model.predict_proba([sample])[0])
+            print(self.int_to_words(self.inverse_map(self.word_to_int), [sample]))
+            print(self.model.predict_proba([sample])[0])
+        
+        return feats
+    
     def reduce_embedding(self, int_to_emb, word_to_int, word_to_emb, tokens):
         #Takes in an embedding and takes out only what it needs (i.e. tokens)
-        self.log("-- Reducing embedding--")
+        print("-- Reducing embedding--")
         # All next to each other
         tokens = np.concatenate(tokens)
         
@@ -102,8 +148,8 @@ class LSTMClassifierStrategy(Strategy):
         unsorted_uniques, unsorted_counts = np.unique(tokens, return_counts = True)
         
         # print Some stuff
-        self.log("Average token frequency:{}".format(np.average(unsorted_counts)))
-        self.log("Total amount of unique tokens:{}".format(len(unsorted_uniques)))
+        print("Average token frequency:{}".format(np.average(unsorted_counts)))
+        print("Total amount of unique tokens:{}".format(len(unsorted_uniques)))
         
         # Sort tokens by frequency
         sorted_unique_tokens = list(zip(unsorted_uniques, unsorted_counts))
@@ -123,13 +169,13 @@ class LSTMClassifierStrategy(Strategy):
         r_word_to_int[self.oov_token] = len(sorted_unique_tokens)
         r_word_to_embed[self.oov_token] = self.resolve(self.oov_token, word_to_emb, emb_dim)
         r_int_to_emb.append(self.resolve(self.oov_token, word_to_emb, emb_dim))
-
-        self.log("Total amount of tokens attempted:      {}".format(self.total_tried))
-        self.log("Total amount of tokens failed to embed:{}".format(self.total_failed))
-        self.log("---> {}%".format(self.total_failed/self.total_tried))
-        self.log("Shape of new embedding:{}".format(np.array(r_int_to_emb).shape))
-
-        self.log("--Done reducing the embeddings--\n")
+        
+        print("Total amount of tokens attempted:      {}".format(self.total_tried))
+        print("Total amount of tokens failed to embed:{}".format(self.total_failed))
+        print("---> {}%".format(self.total_failed/self.total_tried))
+        print("Shape of new embedding:{}".format(np.array(r_int_to_emb).shape))
+        
+        print("--Done reducing the embeddings--\n")
         return r_word_to_embed, r_word_to_int, r_int_to_emb
     
     def resolve(self, word, word_to_emb, emb_dim):
@@ -151,9 +197,17 @@ class LSTMClassifierStrategy(Strategy):
         #data:      [n_stories]
         start = time.time()
         print("--Starting to tokenize--")
-        res = np.array([tokenizer.tokenize(string) for string in data])
+        
+        tokenized = []
+        for string in data:
+            #print(string)
+            tokens = tokenizer.tokenize(string)
+            #print(tokens)
+            tokenized.append(tokens)
+            
+        #res = np.array([tokenizer.tokenize(string) for string in data])
         print("--Done tokenizing--{}\n".format(time.time()-start))
-        return res
+        return tokenized
         
     def test_model(self, valid_data, labels):
         model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
@@ -201,8 +255,6 @@ class LSTMClassifierStrategy(Strategy):
         model.add(LSTM(self.hidden_size))
         if self.use_dropout:
             model.add(Dropout(self.dropout_rate))
-        model.add(Dense(32))
-        model.add(Activation('relu'))
         model.add(Dense(64))
         model.add(Activation('relu'))
         model.add(Dense(1))
@@ -213,53 +265,11 @@ class LSTMClassifierStrategy(Strategy):
         
         return model
 
-    def predict(self, data: np.ndarray) -> str:
-        #Decompose data
-        #--> data[:,0] contains ID'sa
-        #--> data[:,1-5] contains first 4 sentences
-        #--> data[:,5-7] contains 2 ending options
-        # TODO this should read from self.model_path if available
-        self.model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
-        self.log(self.model.summary())
-
-        choices = []
-        for partial_story in data:
-            partial = partial_story[1:5]
-            endings = partial_story[5:7]
-                        
-            full_stories = [np.append(partial, end) for end in endings]
-            
-            full_stories = self.merge_sentences(full_stories)            
-            
-            full_stories = self.clean_strings([lambda x: x.lower(),
-                                              lambda x: x.replace(".", " . ")],full_stories)
-            
-            full_stories = self.tokenize_data(self.tokenizer, full_stories)
-            full_embed = np.array(embed_to_ints(full_stories, self.word_to_int))
-            
-            
-            predictions = []
-            for end in full_embed:
-                predictions.append(self.model.predict(np.array([end]))[0])
-                print(self.int_to_words(self.inverse_map(self.word_to_int), [end]))
-            
-            
-            choice = np.argmax(predictions) + 1
-            print(predictions, choice)
-            choices.append(choice)
-            
-        return choices
 
     def merge_sentences(self, data):
         #data:      [n_stories, n_sentences]
         #return:    [n_stories]
-        return np.array([' '.join(x) for x in data])
-        
-    def fit_tokenizer(self, stories):
-        #stories:   [n_stories]
-        self.tokenizer = tk(self.max_vocab, oov_token = self.oov_token)
-        self.tokenizer.fit_on_texts(stories)        
-        
+        return [' '.join(x) for x in data]
      
     def get_int_mappings(self):
         
@@ -325,9 +335,10 @@ class KerasBatchGenerator(object):
     def group_by_length(self, data, labels):
         #Gets a dict that maps: length --> collection or tuples (sample, label)
         dict = {}
+        
         if len(data) != len(labels):
-            self.log("ERROR: More data than labels. len(data)={0} len(labels)={1}".format(len(data), len(labels)))
-
+            print("----------------------:fhgjklmsdfgklmjsdfg-----------------")
+            
         for i in range(len(data)):
             sample = data[i]
             lab = labels[i]

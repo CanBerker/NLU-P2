@@ -26,7 +26,7 @@ from utils.utils import convert_to_int, embed_to_ints
 class LanguageModelStrategy(Strategy):
 
     def fit(self, data: np.ndarray) -> None:
-        self.max_vocab = 5000
+        self.max_vocab = 10000
         self.oov_token = "<unk>"
         self.embedding_size = 100
         self.hidden_size = 100
@@ -34,7 +34,7 @@ class LanguageModelStrategy(Strategy):
         self.dropout_rate = 0.5
         self.train_size = 0.85
         self.optimizer = Adam()
-        self.num_epochs = 100
+        self.num_epochs = 10
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
         
         
@@ -51,10 +51,9 @@ class LanguageModelStrategy(Strategy):
         stories_strings = self.merge_sentences(full_stories)
         stories_strings = self.clean_strings([lambda x: x.lower(),
                                               lambda x: x.replace(".", " . ")],stories_strings)
-        
+
         # Tokenize the data into tokens using the standard tokenizer
         stories_tokenized = self.tokenize_data(self.tokenizer, stories_strings)
-        
         # Load the embeddings of choice.
         word_to_emb, word_to_int, int_to_emb = load_glove(self.glove_path)
         
@@ -67,23 +66,26 @@ class LanguageModelStrategy(Strategy):
         train_embedded = embed_to_ints(train_x, word_to_int=word_to_int)
         valid_embedded = embed_to_ints(validation_x, word_to_int=word_to_int)
         
-        print("Example embedding:{}".format(self.int_to_words(self.inverse_map(word_to_int),valid_embedded)))
+        self.log("Example embedding:{}".format(self.int_to_words(self.inverse_map(word_to_int),valid_embedded)))
         
         # Build the LSTM LM with softmax
         embedding_matrix = np.array(int_to_emb)
         self.max_vocab, _ = embedding_matrix.shape
-        model = self.build_graph(embedding_matrix)
-        
-        train_generator = KerasBatchGenerator(train_embedded,
-                                              self.max_vocab,
-                                              skip_step=5)
-        valid_data_generator = KerasBatchGenerator(valid_embedded,
-                                                   self.max_vocab,
-                                                   skip_step=5)
+        self.model = self.build_graph(embedding_matrix)
 
-        checkpointer = ModelCheckpoint(filepath=self.save_path + '/model-{epoch:02d}.hdf5', verbose=1)
+        # data generators
+        train_generator = KerasBatchGenerator(train_embedded, self.max_vocab, skip_step=5)
+        valid_data_generator = KerasBatchGenerator(valid_embedded, self.max_vocab, skip_step=5)
 
-        model.fit_generator(train_generator.generate(),
+        model_save_name = '/model-{epoch:02d}.hdf5'
+        if self.continue_training:
+            self.log("Loading model from {}".format(self.model_path))
+            self.model = load_model(self.model_path)
+            model_save_name = '/model-cont-{epoch:02d}.hdf5'
+
+        checkpointer = ModelCheckpoint(filepath=self.save_path + model_save_name, verbose=1)
+
+        self.model.fit_generator(train_generator.generate(),
                              steps_per_epoch=train_generator.n_batches,#len(train_x) // (self.batch_size * self.max_seq_size),
                              epochs=self.num_epochs,
                              validation_data=valid_data_generator.generate(),
@@ -99,11 +101,11 @@ class LanguageModelStrategy(Strategy):
         tokens = np.concatenate(tokens)
         
         # Find unique tokens and count them
-        unsorted_uniques, unsorted_counts = np.unique(tokens, return_counts = True)
+        unsorted_uniques, unsorted_counts = np.unique(tokens, return_counts=True)
         
         # print Some stuff
-        print("Average token frequency:{}".format(np.average(unsorted_counts)))
-        print("Total amount of unique tokens:{}".format(len(unsorted_uniques)))
+        self.log("Average token frequency:{}".format(np.average(unsorted_counts)))
+        self.log("Total amount of unique tokens:{}".format(len(unsorted_uniques)))
         
         # Sort tokens by frequency
         sorted_unique_tokens = list(zip(unsorted_uniques, unsorted_counts))
@@ -123,22 +125,23 @@ class LanguageModelStrategy(Strategy):
         r_word_to_int[self.oov_token] = len(sorted_unique_tokens)
         r_word_to_embed[self.oov_token] = self.resolve(self.oov_token, word_to_emb, emb_dim)
         r_int_to_emb.append(self.resolve(self.oov_token, word_to_emb, emb_dim))
-        
-        print("Total amount of tokens attempted:      {}".format(self.total_tried))
-        print("Total amount of tokens failed to embed:{}".format(self.total_failed))
-        print("---> {}%".format(self.total_failed/self.total_tried))
-        print("Shape of new embedding:{}".format(np.array(r_int_to_emb).shape))
+
+        self.log("Total amount of tokens attempted:      {}".format(self.total_tried))
+        self.log("Total amount of tokens failed to embed:{}".format(self.total_failed))
+        self.log("---> {}%".format(self.total_failed/self.total_tried))
+        self.log("Shape of new embedding:{}".format(np.array(r_int_to_emb).shape))
         
         return r_word_to_embed, r_word_to_int, r_int_to_emb
     
-    def resolve(self, word, word_to_emb, emb_dim):
+    def resolve(self, word, word_to_emb, emb_dim, verbose=False):
         self.total_tried += 1
         try:
             emb = word_to_emb[word]
         except:
             emb = np.random.rand(emb_dim)
-            #print("Was not able to find an embedding for:{}".format(word))
             self.total_failed +=1
+            if verbose:
+                self.log("Was not able to find an embedding for:{}".format(word))
         return emb
         
     def clean_strings(self, cleaners, data):
@@ -149,9 +152,9 @@ class LanguageModelStrategy(Strategy):
     def tokenize_data(self, tokenizer, data):
         #data:      [n_stories]
         start = time.time()
-        print("--Starting to tokenize--")
+        self.log("--Starting to tokenize--")
         res = np.array([tokenizer.tokenize(string) for string in data])
-        print("--Done tokenizing--{}\n".format(time.time()-start))
+        self.log("--Done tokenizing--{}\n".format(time.time()-start))
         return res
         
     def test_model(self, train_data, reversed_dictionary):
@@ -210,12 +213,14 @@ class LanguageModelStrategy(Strategy):
         return model
 
     def predict(self, data: np.ndarray) -> str:
+        # TODO this should read from self.model_path if available
+        self.model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
         return None
 
     def merge_sentences(self, data):
         #data:      [n_stories, n_sentences]
         #return:    [n_stories]
-        return np.apply_along_axis(lambda x: ' '.join(x), 1, data)
+        return np.array([' '.join(x) for x in data])
         
     def fit_tokenizer(self, stories):
         #stories:   [n_stories]
@@ -224,7 +229,6 @@ class LanguageModelStrategy(Strategy):
         
      
     def get_int_mappings(self):
-        
         word_to_int  = self.tokenizer.word_index
         int_to_word  = self.inverse_map(word_to_int)
         return word_to_int, int_to_word
@@ -235,7 +239,7 @@ class LanguageModelStrategy(Strategy):
     def embed_data(self, text_data, word_to_int):
         #return [word_to_int[w] for w in text_data if w in word_to_int ]
         return self.tokenizer.texts_to_sequences(text_data)
-        
+
     def pad_data(self, X, max_seq_size):
         start = time.time()
         self.log("--starting to pad data--")
@@ -251,21 +255,7 @@ class LanguageModelStrategy(Strategy):
         end = time.time()
         self.log("--Done padding data -- {0}\n".format(end-start))
         return np.array(padded_data)
-        
-    def find_max_seq(self, data):
-        #data:      [n_samples, None] (None is variable length)
-        max_len = -1
-        min_len = 10000
-        for i, s in enumerate(data):
-            s_len = len(s)
-            if s_len > max_len:
-                max_len = s_len
-            if s_len < min_len:
-                min_len = s_len
-                _, int_to_word = self.get_int_mappings()
-                print(i, "=", [int_to_word[ss] for ss in s])
-                
-        return [max_len, min_len]
+
 
 class KerasBatchGenerator(object):
 
@@ -294,17 +284,15 @@ class KerasBatchGenerator(object):
         return dict
 
     def generate(self):
-
         # print(np.average([len(x)/self.batch_size for l, x in grouped_by_length.items()]))
         while True:
             for i in range(len(self.grouped_by_length)):
                 lg, l_data = self.grouped_by_length[i]
-                batches = self.createBatch(l_data, self.preferred_batch_size)
+                batches = self.create_batch(l_data, self.preferred_batch_size)
                 for b in batches:
                     yield b[0], b[1]
 
-
-    def createBatch(self, data, pref_batch_size):
+    def create_batch(self, data, pref_batch_size):
         data = np.array(data)
         num_batches = math.ceil(len(data)/pref_batch_size)
         batches = []

@@ -46,7 +46,7 @@ def file_exists(path):
 def inverse_map(mp):
     return {v: k for k, v in mp.items()}
     
-def convert_to_int(word, word_to_int):
+def convert_to_int(word, word_to_int, verbose=False):
     global total, unconverted
     total += 1
     
@@ -54,7 +54,8 @@ def convert_to_int(word, word_to_int):
         return word_to_int[word]
     except:       
         unconverted += 1
-        print("Couldn't convert: {}".format(word))
+        if verbose:
+            print("Couldn't convert: {}".format(word))
         return word_to_int['<unk>']
 
 total = 0
