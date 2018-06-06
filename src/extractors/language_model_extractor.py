@@ -27,6 +27,7 @@ class LanguageModelExtractor(Extractor):
     def __init__(self, glove_path, lang_model_model_path):
         self.glove_path = glove_path
         self.lang_model_model_path = lang_model_model_path
+        self.model = None
 
     def fit(self, data: np.ndarray) -> None:
         self.max_vocab = 10000
@@ -211,6 +212,7 @@ class LanguageModelExtractor(Extractor):
         return model
 
     def extract(self, data: np.ndarray):
+        # This receives the augmented data!
         for partial_story in data:
             partial = partial_story[1:5]
             endings = partial_story[5:7]
@@ -222,26 +224,37 @@ class LanguageModelExtractor(Extractor):
             prob_ending_nc = []
             for end in emb_end:
                 prob = self.model.predict(np.array([end]))[0]
-                log_prob = 0
-                
                 if len(prob) != len(end):
-                    print("sdkfjqlsif")
-                    
+                    self.log("More probs than ending tokens. len(prob)={} len(end)={}".format(len(prob), len(end)))
+                log_prob = 0
                 for time_step in range(len(prob)):
-                    log_prob += math.log(prob[end[time_step]])
+                    log_prob += math.log(prob[time_step][end[time_step]])
                 prob_ending_nc.append(log_prob)
                 
             print(prob_ending_nc)
             print(self.int_to_words(self.inverse_map(self.word_to_int), emb_end))
 
-            quit()
-            
             full_stories = [np.append(partial, end) for end in endings]
+            print(full_stories)
+
             full_stories = self.merge_sentences(full_stories)
             full_stories = self.clean_strings([lambda x: x.lower(), lambda x: x.replace(".", " . ")], full_stories)
             full_stories = self.tokenize_data(self.tokenizer, full_stories)
             full_embed = np.array(embed_to_ints(full_stories, self.word_to_int))
 
+            prob_ending_ctxt = []
+            for full_story in full_embed:
+                full_story_prob = self.model.predict(np.array([full_story]))[0]
+                if len(full_story_prob) != len(full_story):
+                    self.log("len(full_story_prob)={} len(full_story)={}".format(len(full_story_prob), len(full_story)))
+                log_prob = 0
+                for time_step in range(len(full_story_prob)):
+                    log_prob += math.log(full_story_prob[time_step][full_story[time_step]])
+                prob_ending_ctxt.append(log_prob)
+
+            print(prob_ending_ctxt)
+            #TODO combine probabilities P(e1|c1) * P(e1)
+            quit()
             # predictions = []
             # for full_emb_end in full_embed:
             #     self.model.predict(np.array([full_emb_end]))
