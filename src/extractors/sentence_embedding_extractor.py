@@ -26,7 +26,7 @@ class SentenceEmbeddingExtractor(Extractor):
         self.optimizer = Adam()
         
     # Expects the training set, not augmented.
-    def fit(self, data: np.ndarray) -> None:
+    def fit(self, data: np.ndarray, val: np.ndarray) -> None:
         #Fit wants the augmented set but then embedded to sentences
         
         #Decompose the data
@@ -35,7 +35,8 @@ class SentenceEmbeddingExtractor(Extractor):
         train = data[:,2:7]
         
         #Find the pre-embedded data
-        embedded_train = np.load(self.embedded_train_path)        
+        embedded_train = np.load(self.embedded_train_path)
+        embedded_valid = np.load(self.embedded_val_path)
         
         #Perform some checking for sanity
         self.perform_value_checks(train, embedded_train)

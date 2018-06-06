@@ -62,10 +62,10 @@ class EnsembleStrategy(Strategy):
     def init_extractors(self, train, val, aug):
         self.log("Initializing extractors")
         self.extractors = [
-                           (SentimentTrajectoryExtractor(), train),
-                           (EmbeddedClosenessExtractor(self.glove_path), train),
-                           (LSTMClassifierExtractor(self.glove_path, self.save_path), aug),
-                           #(SentenceEmbeddingExtractor("train_embedding.npy","test"), train),
+                           #(SentimentTrajectoryExtractor(), train),
+                           #(EmbeddedClosenessExtractor(self.glove_path), train),
+                           #(LSTMClassifierExtractor(self.glove_path, self.save_path), aug),
+                           (SentenceEmbeddingExtractor("train_embedding.npy", "valid_embedding.npy"), train),
                            ]
         
     def extract_features(self, data):
