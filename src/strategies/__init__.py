@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class Strategy(object):
 
     def __init__(self, evaluator, save_path, use_gpu, glove_path=None, continue_training=False, model_path=None):

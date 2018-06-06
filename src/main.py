@@ -100,18 +100,19 @@ if __name__ == '__main__':
     print("all_labels.shape=", np.array(all_labels).shape)
     print("aug_data.shape=", aug_data.shape)
 
-    strategy = EnsembleStrategy(EnsembleEvaluator(train_data, validation_data, aug_data), args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
+    strategy = EnsembleStrategy(EnsembleEvaluator(train_data, validation_data, aug_data),
+                                args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
     #strategy = TopicDiscoveryStrategy(TopicDiscoveryEvaluator(), save_path, args.use_gpu, glove_file, args.continue_trainining)
     if not args.use_ensemble:
-        #strategy = TopicDiscoveryStrategy(TopicDiscoveryEvaluator())
+        #strategy = TopicDiscoveryStrategy(TopicDiscoveryEvaluator(validation_data))
         #strategy = SentimentTrajectoryStrategy(SentimentTrajectoryEvaluator())
-        #strategy = NBStrategy(PerDataPointEvaluator())
+        #strategy = NBStrategy(PerDataPointEvaluator(train_data, validation_data))
         #strategy = StylisticFeaturesStrategy(OnlyValidationDataEvaluator())
-        #strategy = LanguageModelStrategy(Evaluator(), args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
-        strategy = LSTMClassifierStrategy(Evaluator(), args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
-        #strategy = TopicConsistencyStrategy(Evaluator(), args.use_gpu)
+        regular_eval = Evaluator(train_data, validation_data)
+        #strategy = LanguageModelStrategy(regular_eval, args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
+        strategy = LSTMClassifierStrategy(regular_eval, args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
+        #strategy = TopicConsistencyStrategy(regular_eval, args.use_gpu)
         
-    validation_error = strategy.evaluator.validation_error(strategy, train_data, validation_data, aug_data)
-
-    #validation_error = Evaluator.validation_error(strategy, train_data, validation_data)
+    #validation_error = strategy.evaluator.validation_error(strategy, train_data, validation_data, aug_data)
+    validation_error = strategy.evaluator.validation_error(strategy)
     print('\nValidation error: {}'.format(validation_error))
