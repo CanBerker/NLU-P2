@@ -21,9 +21,13 @@ import nltk
 from extractors import Extractor
 from utils.loader import load_glove
 from utils.utils import convert_to_int, embed_to_ints
+import sys
 
+class LanguageModelExtractor(Extractor):
 
-class LanguageModelStrategy(Extractor):
+    def __init__(self, glove_path, lang_model_model_path):
+        self.glove_path = glove_path
+        self.lang_model_model_path = lang_model_model_path
 
     def fit(self, data: np.ndarray) -> None:
         self.max_vocab = 10000
@@ -37,12 +41,6 @@ class LanguageModelStrategy(Extractor):
         self.num_epochs = 10
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
         
-        
-        # Decompose data
-        _ = data[:,0]
-        _ = data[:,1]
-        _ = data[:,2:6]
-        _ = data[:,6]
         
         # Get full stories to train language model on.
         full_stories = data[:,2:7]
@@ -60,40 +58,41 @@ class LanguageModelStrategy(Extractor):
         train_x, validation_x = train_test_split(stories_tokenized, train_size = self.train_size)
         
         # Reduce the embeddings to what you need only.
-        word_to_emb, word_to_int, int_to_emb = self.reduce_embedding(int_to_emb, word_to_int, word_to_emb, train_x)
+        self.word_to_emb, self.word_to_int, self.int_to_emb = self.reduce_embedding(int_to_emb, word_to_int, word_to_emb, train_x)
         
         # Embed our tokens with the reduced embedding
-        train_embedded = embed_to_ints(train_x, word_to_int=word_to_int)
-        valid_embedded = embed_to_ints(validation_x, word_to_int=word_to_int)
+        # train_embedded = embed_to_ints(train_x, word_to_int=word_to_int)
+        # valid_embedded = embed_to_ints(validation_x, word_to_int=word_to_int)
         
-        self.log("Example embedding:{}".format(self.int_to_words(self.inverse_map(word_to_int),valid_embedded)))
+        # self.log("Example embedding:{}".format(self.int_to_words(self.inverse_map(word_to_int),valid_embedded)))
         
         # Build the LSTM LM with softmax
-        embedding_matrix = np.array(int_to_emb)
-        self.max_vocab, _ = embedding_matrix.shape
-        self.model = self.build_graph(embedding_matrix)
+        # embedding_matrix = np.array(int_to_emb)
+        # self.max_vocab, _ = embedding_matrix.shape
+        # self.model = self.build_graph(embedding_matrix)
 
         # data generators
-        train_generator = KerasBatchGenerator(train_embedded, self.max_vocab, skip_step=5)
-        valid_data_generator = KerasBatchGenerator(valid_embedded, self.max_vocab, skip_step=5)
+        # train_generator = KerasBatchGenerator(train_embedded, self.max_vocab, skip_step=5)
+        # valid_data_generator = KerasBatchGenerator(valid_embedded, self.max_vocab, skip_step=5)
 
-        model_save_name = '/model-{epoch:02d}.hdf5'
-        if self.continue_training:
-            self.log("Loading model from {}".format(self.model_path))
-            self.model = load_model(self.model_path)
-            model_save_name = '/model-cont-{epoch:02d}.hdf5'
-
-        checkpointer = ModelCheckpoint(filepath=self.save_path + model_save_name, verbose=1)
-
-        self.model.fit_generator(train_generator.generate(),
-                             steps_per_epoch=train_generator.n_batches,#len(train_x) // (self.batch_size * self.max_seq_size),
-                             epochs=self.num_epochs,
-                             validation_data=valid_data_generator.generate(),
-                             validation_steps=valid_data_generator.n_batches,
-                             callbacks=[checkpointer]
-                             )
-                             
-        self.test_model(valid_embedded, self.inverse_map(word_to_int))
+        # model_save_name = '/model-{epoch:02d}.hdf5'
+        # if self.continue_training:
+        #     self.log("Loading model from {}".format(self.model_path))
+        #     self.model = load_model(self.model_path)
+        #     model_save_name = '/model-cont-{epoch:02d}.hdf5'
+        #
+        # checkpointer = ModelCheckpoint(filepath=self.save_path + model_save_name, verbose=1)
+        #
+        # self.model.fit_generator(train_generator.generate(),
+        #                      steps_per_epoch=train_generator.n_batches,#len(train_x) // (self.batch_size * self.max_seq_size),
+        #                      epochs=self.num_epochs,
+        #                      validation_data=valid_data_generator.generate(),
+        #                      validation_steps=valid_data_generator.n_batches,
+        #                      callbacks=[checkpointer]
+        #                      )
+        self.log("Loading file from={}".format(self.lang_model_model_path))
+        self.model = load_model(self.lang_model_model_path)
+        print(self.model.summary())
 
     def reduce_embedding(self, int_to_emb, word_to_int, word_to_emb, tokens):
         
@@ -212,9 +211,32 @@ class LanguageModelStrategy(Extractor):
         
         return model
 
-    def predict(self, data: np.ndarray) -> str:
-        # TODO this should read from self.model_path if available
-        self.model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
+    def extract(self, data: np.ndarray):
+        for partial_story in data:
+            partial = partial_story[1:5]
+            endings = partial_story[5:7]
+
+            clean_emb_ends = []
+            for ending in endings:
+                clean_end = self.clean_strings([lambda x: x.lower(), lambda x: x.replace(".", " . ")], [ending])
+                tok_end = self.tokenize_data(self.tokenizer, clean_end)
+                emb_end = np.array(embed_to_ints(tok_end, self.word_to_int))
+                clean_emb_ends.append(emb_end)
+                print(clean_emb_ends)
+                quit()
+
+            full_stories = [np.append(partial, end) for end in endings]
+            full_stories = self.merge_sentences(full_stories)
+            full_stories = self.clean_strings([lambda x: x.lower(), lambda x: x.replace(".", " . ")], full_stories)
+            full_stories = self.tokenize_data(self.tokenizer, full_stories)
+            full_embed = np.array(embed_to_ints(full_stories, self.word_to_int))
+
+            # predictions = []
+            # for full_emb_end in full_embed:
+            #     self.model.predict(np.array([full_emb_end]))
+            #     predictions.append(self.model.predict(np.array([full_emb_end]))[0])
+            #     print(self.int_to_words(self.inverse_map(self.word_to_int), [full_emb_end]))
+
         return None
 
     def merge_sentences(self, data):

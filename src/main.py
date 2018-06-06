@@ -104,7 +104,6 @@ if __name__ == '__main__':
                                 args.spath, args.use_gpu, args.lstm_class_model_path, args.lang_model_model_path,
                                 glove_file)
 
-    #strategy = TopicDiscoveryStrategy(TopicDiscoveryEvaluator(), save_path, args.use_gpu, glove_file, args.continue_trainining)
     if not args.use_ensemble:
         #strategy = TopicDiscoveryStrategy(TopicDiscoveryEvaluator(validation_data))
         #strategy = SentimentTrajectoryStrategy(SentimentTrajectoryEvaluator())

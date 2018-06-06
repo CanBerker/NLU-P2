@@ -10,6 +10,7 @@ from strategies import Strategy
 from extractors.sentiment_trajectory_extractor import SentimentTrajectoryExtractor
 from extractors.embedded_closeness_extractor import EmbeddedClosenessExtractor
 from extractors.lstm_classifier_extractor import LSTMClassifierExtractor
+from extractors.language_model_extractor import LanguageModelExtractor
 #from extractors.sentence_embedding_extractor import SentenceEmbeddingExtractor
 
 from sklearn.linear_model import LogisticRegression as LR
@@ -62,9 +63,10 @@ class EnsembleStrategy(Strategy):
     def init_extractors(self, train, val, aug):
         self.log("Initializing extractors")
         self.extractors = [
-                           (SentimentTrajectoryExtractor(), train),
-                           (EmbeddedClosenessExtractor(self.glove_path), train),
-                           (LSTMClassifierExtractor(self.glove_path, self.save_path), aug),
+                           # (SentimentTrajectoryExtractor(), train),
+                           # (EmbeddedClosenessExtractor(self.glove_path), train),
+                           #(LSTMClassifierExtractor(self.glove_path, self.lstm_class_model_path), aug),
+                            (LanguageModelExtractor(self.glove_path, self.lang_model_model_path), aug),
                            #(SentenceEmbeddingExtractor("train_embedding.npy","test"), train),
                            ]
         

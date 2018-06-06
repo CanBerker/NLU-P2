@@ -25,9 +25,9 @@ from utils.utils import convert_to_int, embed_to_ints
 
 class LSTMClassifierExtractor(Extractor):
 
-    def __init__(self, glove_path, save_path):
+    def __init__(self, glove_path, lstm_class_model_path):
         self.glove_path = glove_path
-        self.save_path = save_path
+        self.lstm_class_model_path = lstm_class_model_path
 
     def fit(self, data: np.ndarray) -> None:
         self.max_vocab = 10000
@@ -52,61 +52,26 @@ class LSTMClassifierExtractor(Extractor):
         labels = data[:,7]
         
         # Paste sentences next to each other
-        
         stories_strings = self.merge_sentences(full_stories)
         stories_strings = self.clean_strings([lambda x: x.lower(),
                                               lambda x: x.replace(".", " . ")],stories_strings)
-        
-        
+
         # Tokenize the data into tokens using the standard tokenizer
         stories_tokenized = self.tokenize_data(self.tokenizer, stories_strings)
-        
-        full_stories = None
-        stories_strings = None
-        
+
         # Load the embeddings of choice.
         word_to_emb, word_to_int, int_to_emb = load_glove(self.glove_path)
-        
         train_x, validation_x, train_lab, validation_lab = train_test_split(stories_tokenized,
                                             labels, train_size = self.train_size)
-                                            
-        print("--->Amount of training samples: {}".format(len(train_x)))
-        print("--->Amount of testing samples: {}".format(len(validation_x)))
+        self.log("--->Amount of training samples: {}".format(len(train_x)))
+        self.log("--->Amount of testing samples: {}".format(len(validation_x)))
         
         # Reduce the embeddings to what you need only.
         self.word_to_emb, self.word_to_int, self.int_to_emb = self.reduce_embedding(int_to_emb, word_to_int, word_to_emb, train_x)
-        
-        
-        
-        # Embed our tokens with the reduced embedding
-        #train_embedded = embed_to_ints(train_x, word_to_int=self.word_to_int)
-        #valid_embedded = embed_to_ints(validation_x, word_to_int=self.word_to_int)
-        
-        # Build the LSTM LM with softmax
-        #embedding_matrix = np.array(self.int_to_emb)
-        #self.max_vocab, _ = embedding_matrix.shape
-        #model = self.build_graph(embedding_matrix)
-        
-        #train_generator = KerasBatchGenerator(train_embedded,
-        #                                      train_lab)
-        #valid_data_generator = KerasBatchGenerator(valid_embedded,
-        #                                           validation_lab)
+        # loading trained model
+        self.log("Loading file from={}".format(self.lstm_class_model_path))
+        self.model = load_model(self.lstm_class_model_path)
 
-        #checkpointer = ModelCheckpoint(filepath=self.save_path + '/model-{epoch:02d}.hdf5', verbose=1)
-
-        #model.fit_generator(train_generator.generate(),
-        #                     steps_per_epoch=train_generator.n_batches,#len(train_x) // (self.batch_size * self.max_seq_size),
-        #                     epochs=self.num_epochs,
-        #                     validation_data=valid_data_generator.generate(),
-        #                     validation_steps=valid_data_generator.n_batches,#len(validation_x)//(self.batch_size) ,#len(validation_x)//(self.batch_size * self.max_seq_size),
-        #                     callbacks=[checkpointer]
-        #                     )
-                             
-        self.model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
-        
-        
-        #self.test_model(valid_embedded, validation_lab)
-    
     def extract(self, data: np.ndarray) -> str:
         #Decompose data
         #--> data[:,0] contains ID'sa
