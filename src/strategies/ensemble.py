@@ -1,4 +1,6 @@
 import numpy as np
+import sys
+
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from sklearn.ensemble import RandomForestClassifier as rf
 from sklearn.svm import SVC
@@ -8,7 +10,7 @@ from strategies import Strategy
 from extractors.sentiment_trajectory_extractor import SentimentTrajectoryExtractor
 from extractors.embedded_closeness_extractor import EmbeddedClosenessExtractor
 from extractors.lstm_classifier_extractor import LSTMClassifierExtractor
-from extractors.sentence_embedding_extractor import SentenceEmbeddingExtractor
+#from extractors.sentence_embedding_extractor import SentenceEmbeddingExtractor
 
 from sklearn.linear_model import LogisticRegression as lr
 class EnsembleStrategy(Strategy):
@@ -16,7 +18,7 @@ class EnsembleStrategy(Strategy):
     # Expects an Augmented training set.
     def fit(self, train: np.ndarray, val: np.ndarray, aug: np.ndarray) -> None:
         
-        print(aug.shape)
+        self.log(aug.shape)
 
         self.extractors = []
         sentiment = SentimentTrajectoryExtractor()
@@ -31,8 +33,8 @@ class EnsembleStrategy(Strategy):
         lstm_c.fit(aug)
         self.extractors.append(lstm_c)
         
-        self.sentence_emb = SentenceEmbeddingExtractor()
-        self.sentence_emb.fit(aug)
+        # self.sentence_emb = SentenceEmbeddingExtractor()
+        # self.sentence_emb.fit(aug)
         
         stories = aug[:,:7]
         labels  = aug[:,-1]

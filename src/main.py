@@ -95,13 +95,12 @@ if __name__ == '__main__':
     all_stories, all_labels = join_and_shuffle([negative_samples, positive_samples],
                                             [negative_lables, positive_labels])
     
-    all_data = np.column_stack((all_stories, all_labels))
-    
+    aug_data = np.column_stack((all_stories, all_labels))
     print("all_stories.shape=", np.array(all_stories).shape)
     print("all_labels.shape=", np.array(all_labels).shape)
-    print("all_data.shape=", all_data.shape)
+    print("aug_data.shape=", aug_data.shape)
 
-    strategy = EnsembleStrategy(Evaluator(), args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
+    strategy = EnsembleStrategy(EnsembleEvaluator(train_data, validation_data, aug_data), args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
     #strategy = TopicDiscoveryStrategy(TopicDiscoveryEvaluator(), save_path, args.use_gpu, glove_file, args.continue_trainining)
     if not args.use_ensemble:
         #strategy = TopicDiscoveryStrategy(TopicDiscoveryEvaluator())
@@ -112,7 +111,7 @@ if __name__ == '__main__':
         strategy = LSTMClassifierStrategy(Evaluator(), args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
         #strategy = TopicConsistencyStrategy(Evaluator(), args.use_gpu)
         
-    validation_error = strategy.evaluator.validation_error(strategy, all_data, validation_data)
+    validation_error = strategy.evaluator.validation_error(strategy, train_data, validation_data, aug_data)
 
     #validation_error = Evaluator.validation_error(strategy, train_data, validation_data)
     print('\nValidation error: {}'.format(validation_error))
