@@ -36,9 +36,7 @@ class SentimentTrajectoryExtractor(Extractor):
         #self.counts = self.counts - np.average(self.counts)
         #___ SVC classifier
         #self.classifier.fit(trajectories[:,:-1], trajectories[:,-1])
-        #___
-        
-        pass
+
 
     # All extractors expect the validation set
     def extract(self, data: np.ndarray) -> str:
