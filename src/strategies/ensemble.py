@@ -17,26 +17,30 @@ from sklearn.linear_model import LogisticRegression as LR
 
 class EnsembleStrategy(Strategy):
 
+    def __init__(self, evaluator, save_path, use_gpu, lstm_class_model_path, lang_model_model_path, glove_path=None):
+        self.use_gpu = use_gpu
+        self.evaluator = evaluator
+        self.glove_path = glove_path
+        self.save_path = save_path
+        self.lstm_class_model_path = lstm_class_model_path
+        self.lang_model_model_path = lang_model_model_path
+
     # Expects an Augmented training set.
     def fit(self, train: np.ndarray, val: np.ndarray, aug: np.ndarray) -> None:
 
         self.log("augmented_data_shape={}".format(aug.shape))
-        
         self.init_extractors(train, val, aug)        
         self.fit_extractors(self.extractors)
 
         stories = aug[:,:7]
         labels  = aug[:,-1]
-        
+        # feature extraction
         features = self.extract_features(stories)
-        
+        # classification using extraction features
         self.classifier = LR()
         self.classifier.fit(features, labels)
-        
-        pass
 
     def predict(self, val: np.ndarray) -> str:   
-        
         # [n_samples, [e1, e2]] -> [2*n_samples, ei]
         expanded_validation_x = self.expand_validation(val)
 
@@ -51,19 +55,22 @@ class EnsembleStrategy(Strategy):
         return predictions
     
     def fit_extractors(self, extractors):
+        self.log("Fitting extractors")
         for (extr, set) in extractors:
             extr.fit(set)
             
     def init_extractors(self, train, val, aug):
+        self.log("Initializing extractors")
         self.extractors = [
                            (SentimentTrajectoryExtractor(), train),
-                           (EmbeddedClosenessExtractor(), train),
+                           (EmbeddedClosenessExtractor(self.glove_path), train),
                            (LSTMClassifierExtractor(self.glove_path, self.save_path), aug),
                            #(SentenceEmbeddingExtractor("train_embedding.npy","test"), train),
                            ]
         
     def extract_features(self, data):
         #Data must be [n_samples, 7]
+        self.log("Extracting features")
         feats = [extr.extract(data) for (extr, _) in self.extractors]
         return np.column_stack(tuple(feats))
         

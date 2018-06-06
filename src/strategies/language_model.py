@@ -158,8 +158,12 @@ class LanguageModelStrategy(Strategy):
         return res
         
     def test_model(self, train_data, reversed_dictionary):
-        model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
-        dummy_iters = 40
+        model_save_name = "/model-{}.hdf5".format(str(self.num_epochs).zfill(2))
+        if self.continue_training:
+            model_save_name = "/model-cont-{}.hdf5".format(str(self.num_epochs).zfill(2))
+
+        model = load_model(self.save_path + model_save_name)
+
         example_training_generator = KerasBatchGenerator(train_data, self.max_vocab, skip_step=1)
         # print("Training data:")
         # for i in range(dummy_iters):

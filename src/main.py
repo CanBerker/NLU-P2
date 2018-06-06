@@ -63,11 +63,11 @@ if __name__ == '__main__':
         print("{0} does NOT EXISTS!".format(args.model_path))
         sys.exit(1)
     if args.use_ensemble:
-        if args.lstm_class_model_path is not None and not Path(args.lstm_class_model_path).exists():
+        if args.lstm_class_model_path is None or not Path(args.lstm_class_model_path).exists():
             print("NO LSTM CLASSIFIER MODEL SUPPLIED!!!")
             print("{0} does NOT EXISTS!".format(args.lstm_class_model_path))
             sys.exit(1)
-        if args.lang_model_model_path is not None and not Path(args.lang_model_model_path).exists():
+        if args.lang_model_model_path is None or not Path(args.lang_model_model_path).exists():
             print("NO LANGUAGE MODEL SUPPLIED!!!")
             print("{0} does NOT EXISTS!".format(args.lang_model_model_path))
             sys.exit(1)
@@ -101,7 +101,9 @@ if __name__ == '__main__':
     print("aug_data.shape=", aug_data.shape)
 
     strategy = EnsembleStrategy(EnsembleEvaluator(train_data, validation_data, aug_data),
-                                args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
+                                args.spath, args.use_gpu, args.lstm_class_model_path, args.lang_model_model_path,
+                                glove_file)
+
     #strategy = TopicDiscoveryStrategy(TopicDiscoveryEvaluator(), save_path, args.use_gpu, glove_file, args.continue_trainining)
     if not args.use_ensemble:
         #strategy = TopicDiscoveryStrategy(TopicDiscoveryEvaluator(validation_data))

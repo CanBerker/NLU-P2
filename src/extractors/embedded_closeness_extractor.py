@@ -11,10 +11,14 @@ from nltk.tokenize import word_tokenize
 from utils.loader import load_glove
 from scipy.spatial.distance import cosine
 
+
 class EmbeddedClosenessExtractor(Extractor):
+    def __init__(self, embedding_path="glove.6B.50d.txt"):
+        self.embedding_path = embedding_path
+
     def fit(self, data: np.ndarray) -> None:
         
-        self.embedding_path = "glove.6B.50d.txt"
+
         self.word_representation = self.define_representation(data)
         
         pass
