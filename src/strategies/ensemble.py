@@ -4,9 +4,11 @@ from sklearn.ensemble import RandomForestClassifier as rf
 from sklearn.svm import SVC
 
 from strategies import Strategy
+
 from extractors.sentiment_trajectory_extractor import SentimentTrajectoryExtractor
 from extractors.embedded_closeness_extractor import EmbeddedClosenessExtractor
 from extractors.lstm_classifier_extractor import LSTMClassifierExtractor
+from extractors.sentence_embedding_extractor import SentenceEmbeddingExtractor
 
 from sklearn.linear_model import LogisticRegression as lr
 class EnsembleStrategy(Strategy):
@@ -24,6 +26,9 @@ class EnsembleStrategy(Strategy):
         
         self.lstm_c = LSTMClassifierExtractor(self.glove_path, self.save_path)
         self.lstm_c.fit(aug)
+        
+        self.sentence_emb = SentenceEmbeddingExtractor()
+        self.sentence_emb.fit(aug)
         
         stories = aug[:,:7]
         labels  = aug[:,-1]
