@@ -7,16 +7,16 @@ import time
 import math
 
 #File must be in /data
-DATA_FILE = "train.csv"
-DATA_FORMAT = "TRAIN"
-OUTPUT_NAME = "train_embedding"
+DATA_FILE = "validation.csv"
+DATA_FORMAT = "VALIDATION"
+OUTPUT_NAME = "valid_embedding"
 
 
-all = np.load(OUTPUT_NAME + ".npy")
-all = all[:,3:]
-np.save(OUTPUT_NAME + "_last", all)
+#all = np.load(OUTPUT_NAME + ".npy")
+#all = all[:,3:]
+#np.save(OUTPUT_NAME + "_last", all)
 
-quit()
+#quit()
 
 data_loc = os.path.join(os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), DATA_FILE)
@@ -33,7 +33,7 @@ elif DATA_FORMAT == "VALIDATION":
     # 1-4: Partial_story
     # 5  : ending 1
     # 6  : ending 2
-    data = data[:,1:7]
+    data = data[:,4:7]
     
 n_samples, n_sentences = data.shape
 
@@ -47,7 +47,7 @@ encoder = skipthoughts.Encoder(model)
 
 start = time.time()
 print("--Starting to sentence embed the data")
-sentences_embedded = encoder.encode(d)
+sentences_embedded = encoder.encode(data)
 print("Took: {}".format(time.time() - start))
 
 res = np.reshape(sentences_embedded, (n_samples, n_sentences, -1))

@@ -51,6 +51,8 @@ class SentenceEmbeddingExtractor(Extractor):
         features = self.extract_features(embedded_aug)
         n_samples, n_features = features.shape
         
+        checkpointer = ModelCheckpoint(filepath=self.save_path + model_save_name, verbose=1)
+        
         self.model = self.build_model(n_features, 64)
         self.model.fit(features,
                        all_labels,
@@ -89,9 +91,12 @@ class SentenceEmbeddingExtractor(Extractor):
         return model
         
     def augment_data(self, data, ratio=1):
-        beginnings  = data[:,:4]
-        endings     = data[:,4]
-                
+        beginnings  = data[:,:-1] #Everything but the last
+        endings     = data[:,-1]  #Only the last
+        
+        print(endings.shape)
+        print(beginnings.shape)
+        
         # create copies of the rows
         tile_parameter = (ratio, 1)
         negative_samples = np.tile(beginnings, tile_parameter)
@@ -137,9 +142,6 @@ class SentenceEmbeddingExtractor(Extractor):
         n_samples, n_sentences = train.shape
         n_samples_e, n_sentences_e, emb_size = embedded_train.shape
         
-        if n_sentences != n_sentences_e:
-            raise ValueError("The embedded file doesn't contain equal amount of sentences per sample as the given data...")
-            
         if n_samples_e != n_samples:
             raise ValueError("The embedded file doesn't contain equal amount of samples as the given data...")
         
