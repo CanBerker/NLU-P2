@@ -3,9 +3,6 @@ import numpy as np
 
 class Extractor(object):
 
-    def __init__(self):
-        pass
-
     def fit(self, data: np.ndarray) -> None:
         raise NotImplementedError("Strategy not implemented.")
 

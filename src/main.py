@@ -63,11 +63,11 @@ if __name__ == '__main__':
         print("{0} does NOT EXISTS!".format(args.model_path))
         sys.exit(1)
     if args.use_ensemble:
-        if args.lstm_class_model_path is not None and not Path(args.lstm_class_model_path).exists():
+        if args.lstm_class_model_path is None or not Path(args.lstm_class_model_path).exists():
             print("NO LSTM CLASSIFIER MODEL SUPPLIED!!!")
             print("{0} does NOT EXISTS!".format(args.lstm_class_model_path))
             sys.exit(1)
-        if args.lang_model_model_path is not None and not Path(args.lang_model_model_path).exists():
+        if args.lang_model_model_path is None or not Path(args.lang_model_model_path).exists():
             print("NO LANGUAGE MODEL SUPPLIED!!!")
             print("{0} does NOT EXISTS!".format(args.lang_model_model_path))
             sys.exit(1)
@@ -95,24 +95,26 @@ if __name__ == '__main__':
     all_stories, all_labels = join_and_shuffle([negative_samples, positive_samples],
                                             [negative_lables, positive_labels])
     
-    all_data = np.column_stack((all_stories, all_labels))
-    
+    aug_data = np.column_stack((all_stories, all_labels))
     print("all_stories.shape=", np.array(all_stories).shape)
     print("all_labels.shape=", np.array(all_labels).shape)
-    print("all_data.shape=", all_data.shape)
+    print("aug_data.shape=", aug_data.shape)
 
-    strategy = EnsembleStrategy(EnsembleEvaluator(), args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
+    strategy = EnsembleStrategy(EnsembleEvaluator(train_data, validation_data, aug_data),
+                                args.spath, args.use_gpu, args.lstm_class_model_path, args.lang_model_model_path,
+                                glove_file)
+
     #strategy = TopicDiscoveryStrategy(TopicDiscoveryEvaluator(), save_path, args.use_gpu, glove_file, args.continue_trainining)
     if not args.use_ensemble:
-        #strategy = TopicDiscoveryStrategy(TopicDiscoveryEvaluator())
+        #strategy = TopicDiscoveryStrategy(TopicDiscoveryEvaluator(validation_data))
         #strategy = SentimentTrajectoryStrategy(SentimentTrajectoryEvaluator())
-        #strategy = NBStrategy(PerDataPointEvaluator())
+        #strategy = NBStrategy(PerDataPointEvaluator(train_data, validation_data))
         #strategy = StylisticFeaturesStrategy(OnlyValidationDataEvaluator())
-        #strategy = LanguageModelStrategy(Evaluator(), args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
-        strategy = LSTMClassifierStrategy(Evaluator(), args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
-        #strategy = TopicConsistencyStrategy(Evaluator(), args.use_gpu)
+        regular_eval = Evaluator(train_data, validation_data)
+        #strategy = LanguageModelStrategy(regular_eval, args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
+        strategy = LSTMClassifierStrategy(regular_eval, args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
+        #strategy = TopicConsistencyStrategy(regular_eval, args.use_gpu)
         
-    validation_error = strategy.evaluator.validation_error(strategy, train_data, validation_data, all_data)
-
-    #validation_error = Evaluator.validation_error(strategy, train_data, validation_data)
+    #validation_error = strategy.evaluator.validation_error(strategy, train_data, validation_data, aug_data)
+    validation_error = strategy.evaluator.validation_error(strategy)
     print('\nValidation error: {}'.format(validation_error))
