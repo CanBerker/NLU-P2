@@ -47,6 +47,8 @@ if __name__ == '__main__':
     parser.add_argument("-en", dest='use_ensemble', action='store_true', help="Use ensemble of methods")
     parser.add_argument("-ct", dest='continue_training', action='store_true', default=False, help="Continue training")
     parser.add_argument("-mp", dest='model_path', default=None, help="Model path to continue training")
+    parser.add_argument("-lc_mp", dest='lstm_class_model_path', default=None, help="LSTM classifier model path to be used for ensembling.")
+    parser.add_argument("-lm_mp", dest='lang_model_model_path', default=None, help="Language model model path to be used for ensembling.")
 
     args = parser.parse_args()
     print(args)
@@ -60,6 +62,15 @@ if __name__ == '__main__':
         print("NO MODEL TO CONTINUE TRAINING!!!")
         print("{0} does NOT EXISTS!".format(args.model_path))
         sys.exit(1)
+    if args.use_ensemble:
+        if args.lstm_class_model_path is not None and not Path(args.lstm_class_model_path).exists():
+            print("NO LSTM CLASSIFIER MODEL SUPPLIED!!!")
+            print("{0} does NOT EXISTS!".format(args.lstm_class_model_path))
+            sys.exit(1)
+        if args.lang_model_model_path is not None and not Path(args.lang_model_model_path).exists():
+            print("NO LANGUAGE MODEL SUPPLIED!!!")
+            print("{0} does NOT EXISTS!".format(args.lang_model_model_path))
+            sys.exit(1)
 
     if args.tpath is not None:
         train_data_loc = args.tpath
@@ -67,6 +78,7 @@ if __name__ == '__main__':
         validation_data_loc = args.vpath
     if args.glove_path is not None:
         glove_file = args.glove_path
+
 
     print('Train data location: {}'.format(train_data_loc))
     print('Validation data location: {}'.format(validation_data_loc))
@@ -96,8 +108,8 @@ if __name__ == '__main__':
         #strategy = SentimentTrajectoryStrategy(SentimentTrajectoryEvaluator())
         #strategy = NBStrategy(PerDataPointEvaluator())
         #strategy = StylisticFeaturesStrategy(OnlyValidationDataEvaluator())
-        strategy = LanguageModelStrategy(Evaluator(), args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
-        # strategy = LSTMClassifierStrategy(Evaluator(), args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
+        #strategy = LanguageModelStrategy(Evaluator(), args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
+        strategy = LSTMClassifierStrategy(Evaluator(), args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
         #strategy = TopicConsistencyStrategy(Evaluator(), args.use_gpu)
         
     validation_error = strategy.evaluator.validation_error(strategy, all_data, validation_data)

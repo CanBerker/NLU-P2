@@ -24,14 +24,15 @@ from utils.utils import convert_to_int, embed_to_ints
 class LSTMClassifierStrategy(Strategy):
 
     def fit(self, data: np.ndarray) -> None:
+        self.max_vocab = 10000
         self.oov_token = "<unk>"
         self.embedding_size = 50
         self.hidden_size = 128
         self.use_dropout = True
-        self.train_size = 0.9
+        self.train_size = 0.85
         self.dropout_rate = 0.5
-        self.optimizer = Adam()
-        self.num_epochs = 20
+        self.optimizer = Adam(lr=0.0001)
+        self.num_epochs = 10
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
 
         # Decompose data
@@ -203,8 +204,8 @@ class LSTMClassifierStrategy(Strategy):
             model.add(Dropout(self.dropout_rate))
         model.add(Dense(32))
         model.add(Activation('relu'))
-        model.add(Dense(64))
-        model.add(Activation('relu'))
+        #model.add(Dense(64))
+        #model.add(Activation('relu'))
         model.add(Dense(1))
         model.add(Activation('sigmoid'))
         
@@ -317,7 +318,7 @@ class KerasBatchGenerator(object):
         
         # A list of tuples [(length, [(sample_of_size_length, label)])]
         self.grouped_by_length = list(self.group_by_length(self.data, self.labels).items())
-        self.preferred_batch_size =  42
+        self.preferred_batch_size =  32
         
         self.n_batches = np.sum([math.ceil(len(samples)/self.preferred_batch_size) for l, samples in self.grouped_by_length])
         print("Number of batches found:{}".format(self.n_batches))

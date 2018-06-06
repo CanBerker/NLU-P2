@@ -17,15 +17,19 @@ class EnsembleStrategy(Strategy):
     def fit(self, train: np.ndarray, val: np.ndarray, aug: np.ndarray) -> None:
         
         print(aug.shape)
+
+        self.extractors = []
+        sentiment = SentimentTrajectoryExtractor()
+        sentiment.fit(train)
+        self.extractors.append(sentiment)
         
-        self.sentiment = SentimentTrajectoryExtractor()
-        self.sentiment.fit(train)
+        embed_close = EmbeddedClosenessExtractor()
+        embed_close.fit(train)
+        self.extractors.append(embed_close)
         
-        self.embed_close = EmbeddedClosenessExtractor()
-        self.embed_close.fit(train)
-        
-        self.lstm_c = LSTMClassifierExtractor(self.glove_path, self.save_path)
-        self.lstm_c.fit(aug)
+        lstm_c = LSTMClassifierExtractor(self.glove_path, self.save_path)
+        lstm_c.fit(aug)
+        self.extractors.append(lstm_c)
         
         self.sentence_emb = SentenceEmbeddingExtractor()
         self.sentence_emb.fit(aug)
@@ -57,14 +61,7 @@ class EnsembleStrategy(Strategy):
         
     def extract_features(self, data):
         #Data must be [n_samples, 7]
-        extractors = [
-                      self.sentiment,
-                      self.embed_close,
-                      self.lstm_c,
-                      ]
-                      
-        feats = [extr.extract(data) for extr in extractors]
-        
+        feats = [extr.extract(data) for extr in self.extractors]
         return np.column_stack(tuple(feats))
         
     def expand_validation(self, validation):

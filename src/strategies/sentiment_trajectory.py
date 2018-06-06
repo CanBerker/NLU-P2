@@ -37,9 +37,6 @@ class SentimentTrajectoryStrategy(Strategy):
         self.counts = self.count_elements(trajectories, self.n_values, smoothing = 5)
         #___ SVC classifier
         #self.classifier.fit(trajectories[:,:-1], trajectories[:,-1])
-        #___
-        
-        pass
 
     def predict(self, data: np.ndarray) -> str:
         #Decompose data
