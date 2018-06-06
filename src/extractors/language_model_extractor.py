@@ -216,14 +216,10 @@ class LanguageModelExtractor(Extractor):
             partial = partial_story[1:5]
             endings = partial_story[5:7]
 
-            clean_emb_ends = []
-            for ending in endings:
-                clean_end = self.clean_strings([lambda x: x.lower(), lambda x: x.replace(".", " . ")], [ending])
-                tok_end = self.tokenize_data(self.tokenizer, clean_end)
-                emb_end = np.array(embed_to_ints(tok_end, self.word_to_int))
-                clean_emb_ends.append(emb_end)
-                print(clean_emb_ends)
-                quit()
+            clean_ends = self.clean_strings([lambda x: x.lower(), lambda x: x.replace(".", " . ")], endings)
+            tok_end = self.tokenize_data(self.tokenizer, clean_ends)
+            emb_end = np.array(embed_to_ints(tok_end, self.word_to_int))
+
 
             full_stories = [np.append(partial, end) for end in endings]
             full_stories = self.merge_sentences(full_stories)
