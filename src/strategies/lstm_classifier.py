@@ -1,5 +1,6 @@
 import math
 import time
+import sys
 
 import numpy as np
 import tensorflow as tf
@@ -220,7 +221,11 @@ class LSTMClassifierStrategy(Strategy):
         #--> data[:,1-5] contains first 4 sentences
         #--> data[:,5-7] contains 2 ending options
         # TODO this should read from self.model_path if available
-        self.model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
+        model_save_name = "/model-{}.hdf5".format(str(self.num_epochs).zfill(2))
+        if self.continue_training:
+            model_save_name = "/model-cont-{}.hdf5".format(str(self.num_epochs).zfill(2))
+        self.model = load_model(self.save_path + model_save_name)
+        #self.model = load_model(self.save_path + )
         self.log(self.model.summary())
 
         choices = []
