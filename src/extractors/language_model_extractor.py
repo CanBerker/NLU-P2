@@ -1,5 +1,4 @@
 import math
-import math
 import time
 
 import numpy as np
@@ -220,7 +219,23 @@ class LanguageModelExtractor(Extractor):
             tok_end = self.tokenize_data(self.tokenizer, clean_ends)
             emb_end = np.array(embed_to_ints(tok_end, self.word_to_int))
 
+            prob_ending_nc = []
+            for end in emb_end:
+                prob = self.model.predict(np.array([end]))[0]
+                log_prob = 0
+                
+                if len(prob) != len(end):
+                    print("sdkfjqlsif")
+                    
+                for time_step in range(len(prob)):
+                    log_prob += math.log(prob[end[time_step]])
+                prob_ending_nc.append(log_prob)
+                
+            print(prob_ending_nc)
+            print(self.int_to_words(self.inverse_map(self.word_to_int), emb_end))
 
+            quit()
+            
             full_stories = [np.append(partial, end) for end in endings]
             full_stories = self.merge_sentences(full_stories)
             full_stories = self.clean_strings([lambda x: x.lower(), lambda x: x.replace(".", " . ")], full_stories)
