@@ -55,7 +55,7 @@ class EnsembleStrategy(Strategy):
                            #(SentimentTrajectoryExtractor(), train),
                            #(EmbeddedClosenessExtractor(), train),
                            #(LSTMClassifierExtractor(self.glove_path, self.save_path), aug),
-                           (SentenceEmbeddingExtractor("train_embedding.npy","test"), train),
+                           (SentenceEmbeddingExtractor("train_embedding_last.npy","valid_embedding_last.npy"), train),
                            ]
         
     def extract_features(self, data):
