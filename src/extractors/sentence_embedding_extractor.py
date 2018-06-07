@@ -19,14 +19,16 @@ from keras.utils import to_categorical
 
 class SentenceEmbeddingExtractor(Extractor):
 
-    def __init__(self, embedded_train_path, embedded_val_path):
+    def __init__(self, embedded_train_path, embedded_val_path, save_path, labs):
         self.embedded_train_path = embedded_train_path
         self.embedded_val_path = embedded_val_path
+        self.labs = labs
         self.n_sentences_keep = 2
         self.optimizer = Adam()
+        self.save_path = save_path
         
     # Expects the training set, not augmented.
-    def fit(self, data: np.ndarray, val: np.ndarray) -> None:
+    def fit(self, data: np.ndarray) -> None:
         #Fit wants the augmented set but then embedded to sentences
         
         #Decompose the data
@@ -36,8 +38,9 @@ class SentenceEmbeddingExtractor(Extractor):
         
         #Find the pre-embedded data
         embedded_train = np.load(self.embedded_train_path)
-        embedded_valid = np.load(self.embedded_val_path)
-        
+        embedded_valid = np.load(self.embedded_val_path)        
+        embedded_valid = self.expand_endings(embedded_valid)
+                
         #Perform some checking for sanity
         self.perform_value_checks(train, embedded_train)
         
@@ -47,19 +50,26 @@ class SentenceEmbeddingExtractor(Extractor):
         
         embedded_aug = np.array(embedded_aug)
         
+        print("Validation data shape:{}".format(embedded_valid.shape))
         print("Augmented the training data to:{}".format(np.array(embedded_aug).shape))
         
+        valid_features = self.extract_features(embedded_valid)
         features = self.extract_features(embedded_aug)
         n_samples, n_features = features.shape
         
-        checkpointer = ModelCheckpoint(filepath=self.save_path + model_save_name, verbose=1)
+        print("Features of training data of shape:{}".format(features.shape))
+        print("Features of validation data of shape:{}".format(valid_features.shape))
+        
+        checkpointer = ModelCheckpoint(filepath=self.save_path + "test", verbose=1)
         
         self.model = self.build_model(n_features, 64)
         self.model.fit(features,
                        all_labels,
                        batch_size = 64,
                        epochs = 100,
-                       validation_split = 0.2)
+                       #validation_split = 0.2,
+                       validation_data = (valid_features, self.labs),
+                       )
         
         pass
 
@@ -75,6 +85,18 @@ class SentenceEmbeddingExtractor(Extractor):
         
         return None
 
+    def expand_endings(self, embedded_valid):
+        all_flat = []
+        for embedded in embedded_valid:
+            e_1 = embedded[1]
+            e_2 = embedded[2]
+            last = embedded[0]
+            story_1 = [last, e_1]
+            story_2 = [last, e_2]
+            all_flat.append(story_1)
+            all_flat.append(story_2)
+        return np.array(all_flat)
+        
     def build_model(self, input_dim, batch_size):
         inputs = Input(shape=(input_dim,))
         #hl_1 = Dense(2400, activation='relu')(inputs)
