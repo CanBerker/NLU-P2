@@ -60,7 +60,8 @@ class SentenceEmbeddingExtractor(Extractor):
         print("Features of training data of shape:{}".format(features.shape))
         print("Features of validation data of shape:{}".format(valid_features.shape))
         
-        checkpointer = ModelCheckpoint(filepath=self.save_path + "test", verbose=1)
+        model_save_name = '/model-{epoch:02d}.hdf5'
+        checkpointer = ModelCheckpoint(filepath=self.save_path + model_save_name, verbose=1)
         
         self.model = self.build_model(n_features, 64)
         self.model.fit(features,
@@ -69,6 +70,7 @@ class SentenceEmbeddingExtractor(Extractor):
                        epochs = 100,
                        #validation_split = 0.2,
                        validation_data = (valid_features, self.labs),
+                       callbacks = [checkpointer]
                        )
         
         pass

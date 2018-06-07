@@ -89,24 +89,15 @@ class EnsembleStrategy(Strategy):
             elif app == "LanguageModel":
                 self.extractors.append((LanguageModelExtractor(self.glove_path, self.lang_model_model_path), aug))
             elif app == "SentenceEmbedding":
-                #self.extractors.append((SentenceEmbeddingExtractor("train_embedding.npy","test"), train))
-                self.log("Extractor={} not implemented yet!".format(app))
-                quit()
-        self.extractors = [
-<<<<<<< HEAD
+                self.extractors.append((SentenceEmbeddingExtractor("train_embedding_last.npy","valid_embedding_last.npy", self.save_path, self.expanded_validation_labels), train))
+                
+        #self.extractors = [
                            #(SentimentTrajectoryExtractor(), train),
                            #(EmbeddedClosenessExtractor(self.glove_path), train),
                            #(LSTMClassifierExtractor(self.glove_path, self.lstm_class_model_path), aug),
                            #(LanguageModelExtractor(self.glove_path, self.lang_model_model_path), aug),
-                           (SentenceEmbeddingExtractor("train_embedding_last.npy","valid_embedding_last.npy", self.save_path, self.expanded_validation_labels), train),
-=======
-                            #(SentimentTrajectoryExtractor(), train),
-                           #(EmbeddedClosenessExtractor(self.glove_path), train),
-                           #(LSTMClassifierExtractor(self.glove_path, self.lstm_class_model_path), aug),
-                           (LanguageModelExtractor(self.glove_path, self.lang_model_model_path), aug),
-                           #(SentenceEmbeddingExtractor("train_embedding.npy","test"), train),
->>>>>>> e93d07ff075c0150a01b43ee4e69cee502b22cdc
-                           ]
+        #                   (SentenceEmbeddingExtractor("train_embedding_last.npy","valid_embedding_last.npy", self.save_path, self.expanded_validation_labels), train),
+        #                   ]
         
     def extract_features(self, data):
         #Data must be [n_samples, 7]

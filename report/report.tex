@@ -15,7 +15,7 @@
 
 \usepackage[final]{nips_2017}
 
-
+\usepackage{graphicx}
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
 \usepackage{hyperref}       % hyperlinks
@@ -46,28 +46,42 @@ Feel free to add more sections but those listed here are strongly recommended.
 \section{Introduction}
 Natural language is
 You can keep this short. Ideally you introduce the task already in a way that highlights the difficulties  your method will tackle.
-\section{Methodology}
-The base of our approach follows that of successes in previous work such as \cite{UWNLP} and \cite{COGCOMP}. More specifically our approach consists of training a binary logistic regression classifier based on an augmented data set which we create ourselves. This augmentation is based on ideas that have been successfully used in the past (e.g. \cite{LSTMClassifier}). As features for our classifier we consider a collection of feature extractors which produce a vector of features for any 5 sentence story. For each sample we combine the outputs of all feature extractors to obtain the full features of the data.
 
-Your idea. You can rename this section if you like. Early on in this section -- but not necessarily first -- make clear what category your method falls into: Is it generative? Discriminative? Is there a particular additional data source you want to use?
+\section{Methodology}
+The idea of our approach follows that of successes in previous work such as \cite{UWNLP} and \cite{COGCOMP}. More specifically our approach consists of training a binary logistic regression classifier based on an augmented data set which we create ourselves. This augmentation is based on ideas that have been successfully used in the past (e.g. \cite{LSTMClassifier}). As features for our classifier we consider a collection of feature extractors which produce a vector of features for any 5 sentence story.
+
+\subsection{Data augmentation}
+The augmented data set is composed of labeled 5 sentence stories. We create it by combining the original data set and a negative data set. Here the original dataset gets assigned a positive label and the negative set a negative label. We compose the negative dataset by replacing the ending of each 5 sentence story by a randomly selected ending, as done by \cite{LSTMClassifier}. We use a replication factor of 1, i.e. for every sample of the original training set we add a single negative sample.
+
+\subsection{Feature extraction}
+In order to fit a logistic regression model as described above we use features obtained from feature extractors. A feature extractor is simply a model which takes in a 5 sentence story and outputs a feature or vector of features. Feature extractors are discussed extensively in section 3. To obtain the final set of features we simply combine features from all extractors for each sample.
+%Your idea. You can rename this section if you like. Early on in this section -- but not necessarily first -- make clear what category your method falls into: Is it generative? Discriminative? Is there a particular additional data source you want to use?
 
 \section{Model}
-\label{sec:model}
 
-The math/architecture of your model. This should formally describe your idea from above. If you really want to, you can merge the two sections.
-\section{Training}
-What is your objective? How do you optimize it?
+	\begin{figure}[h!]
+		\centering
+		\includegraphics[scale=0.8]{fig/logistic_fitting.pdf}
+		\caption{Main components of the global approach.}
+		\label{Main}
+	\end{figure}
 
-\section{Experiments}
-\label{sec:exp}
+The core components of our approach can be seen in figure \ref*{Main}. As described in section 2, the $C_i$ are the feature extractors and indicates a mapping:
+\begin{equation}
+C: \mathbb{S}^5 \rightarrow \mathbb{R}^l
+\end{equation}
+That is, it's a function of the set of all 5 sentence stories ($\mathbb{S}^5$) to a real vector. 
+
+%The math/architecture of your model. This should formally describe your idea from above. If you really want to, you can merge the two sections.
+
+\subsection{Training}
+\label{sec:training}
+%What is your objective? How do you optimize it?
 
 In this section, we describe the results for the different extractors we apply
 to the {\it Story Cloze task} as well as for our Ensemble method. For all our
 approaches, the training set is first augmented as previously explained and then
 used to train each of our extractors.
-
-\subsection{Training}
-\label{subsec:training}
 
 Table \ref{tab:params} shows the number of trainable parameters of the models we
 used for the task and additionally the training duration. Our models were
@@ -147,16 +161,7 @@ On the other hand, the sentiment trajectory model is able
 to capture the how the story is actually evolving along the sentences. Thus,
 with this method we were able to score a high accuracy on both data sets.
 
-
-\subsection{Sentiment trajectory}
-
-Our {\it Sentiment trajectory} extractor takes as input the augmented data
-produced
-
-\subsection{LSTM classifier}
-\subsection{Language model}
-
-This {\bf must} at least include the accuracy of your method on the validation set.
+%This {\bf must} at least include the accuracy of your method on the validation set.
 
 \section{Conclusion}
 You can keep this short, too. \cite{*}

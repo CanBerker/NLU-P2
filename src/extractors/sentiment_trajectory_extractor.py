@@ -9,6 +9,7 @@ class SentimentTrajectoryExtractor(Extractor):
     # Expects the training set, not augmented.
     def fit(self, data: np.ndarray) -> None:
     
+        self.verbose = False
         self.sentimentAnalyzer = SentimentIntensityAnalyzer()
         self.story_grouping = (1,2,1,1) #Assume beginning -> body -> climax -> ending
         self.n_values = 3   #Negative, Neutral and Positive
@@ -20,6 +21,7 @@ class SentimentTrajectoryExtractor(Extractor):
         titles = data[:,1]
         stories = data[:,-self.n_sentences:]        
         
+        # defining classifier
         self.classifier = rf()
         
         #Group sentences to form blocks for sentiment
@@ -117,9 +119,10 @@ class SentimentTrajectoryExtractor(Extractor):
         #trajectory = [0]*len(story)
         
         #Sanity
-        self.done +=1
-        if self.done % 1000 == 0:
-            print("Done {0}".format(self.done))
+        if self.verbose:
+            self.done +=1
+            if self.done % 1000 == 0:
+                print("Done {0}".format(self.done))
         #Sanity
         
         return trajectory
