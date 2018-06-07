@@ -297,9 +297,9 @@ class LanguageModelExtractor(Extractor):
                 print(self.int_to_words(self.inverse_map(self.word_to_int), [embedded_endings[i]]))
             #statistics
             
-        conditional = [a - b for (a,b) in zip(avg_probs_full, avg_probs_end)]
+        #conditional = [a - b for (a,b) in zip(avg_probs_full, avg_probs_end)]
         
-        return np.column_stack((avg_probs_end, avg_probs_full, conditional))
+        return np.column_stack((avg_probs_end, avg_probs_full))
         
     def find_log_probability(self, probabilities, ints):
         #probabilities: [n_timesteps, n_vocab]
