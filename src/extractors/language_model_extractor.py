@@ -27,6 +27,7 @@ class LanguageModelExtractor(Extractor):
     def __init__(self, glove_path, lang_model_model_path):
         self.glove_path = glove_path
         self.lang_model_model_path = lang_model_model_path
+        self.model = None
 
     def fit(self, data: np.ndarray) -> None:
         self.max_vocab = 10000
@@ -299,7 +300,7 @@ class LanguageModelExtractor(Extractor):
             
         #conditional = [a - b for (a,b) in zip(avg_probs_full, avg_probs_end)]
         
-        return np.column_stack((avg_probs_end, avg_probs_full))
+        return np.column_stack(( avg_probs_full))
         
     def find_log_probability(self, probabilities, ints):
         #probabilities: [n_timesteps, n_vocab]
@@ -322,6 +323,7 @@ class LanguageModelExtractor(Extractor):
     def combine_lists(self, list_of_lists):
         return [item for sublist in list_of_lists for item in sublist]
         
+
     def merge_sentences(self, data):
         #data:      [n_stories, n_sentences]
         #return:    [n_stories]
