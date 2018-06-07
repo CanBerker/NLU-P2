@@ -71,6 +71,7 @@ class LSTMClassifierExtractor(Extractor):
         # loading trained model
         self.log("Loading file from={}".format(self.lstm_class_model_path))
         self.model = load_model(self.lstm_class_model_path)
+        print(self.model.summary())
 
     def extract(self, data: np.ndarray) -> str:
         #Decompose data
