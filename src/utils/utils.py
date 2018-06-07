@@ -68,7 +68,8 @@ def embed_to_ints(X, word_to_int, verbose=False):
     total = 0
     unconverted = 0
     start = time.time()
-    print("--starting to embed--")
+    if verbose:
+        print("--starting to embed--")
     embedded = []
     for sentence in X:
         embedded_s = [convert_to_int(w, word_to_int) for w in sentence]

@@ -147,12 +147,14 @@ class LanguageModelExtractor(Extractor):
             data = np.vectorize(cleaner)(data)
         return data
         
-    def tokenize_data(self, tokenizer, data):
+    def tokenize_data(self, tokenizer, data, verbose=False):
         #data:      [n_stories]
         start = time.time()
-        self.log("--Starting to tokenize--")
+        if verbose: 
+            self.log("--Starting to tokenize--")
         res = np.array([tokenizer.tokenize(string) for string in data])
-        self.log("--Done tokenizing--{}\n".format(time.time()-start))
+        if verbose:
+            self.log("--Done tokenizing--{}\n".format(time.time()-start))
         return res
         
     def test_model(self, train_data, reversed_dictionary):
@@ -211,45 +213,115 @@ class LanguageModelExtractor(Extractor):
         return model
 
     def extract(self, data: np.ndarray):
-        for partial_story in data:
-            partial = partial_story[1:5]
-            endings = partial_story[5:7]
-
-            clean_ends = self.clean_strings([lambda x: x.lower(), lambda x: x.replace(".", " . ")], endings)
-            tok_end = self.tokenize_data(self.tokenizer, clean_ends)
-            emb_end = np.array(embed_to_ints(tok_end, self.word_to_int))
-
-            prob_ending_nc = []
-            for end in emb_end:
-                prob = self.model.predict(np.array([end]))[0]
-                log_prob = 0
-                
-                if len(prob) != len(end):
-                    print("sdkfjqlsif")
-                    
-                for time_step in range(len(prob)):
-                    log_prob += math.log(prob[end[time_step]])
-                prob_ending_nc.append(log_prob)
-                
-            print(prob_ending_nc)
-            print(self.int_to_words(self.inverse_map(self.word_to_int), emb_end))
-
-            quit()
+        all_sentences = data[:,2:7]
+        original_shape  = all_sentences.shape
+        all_sentences = all_sentences.flatten()
+        
+        all_sentences = self.clean_strings([lambda x: x.lower(), lambda x: x.replace(".", " . ")], all_sentences)
+        tokenized_sentences = self.tokenize_data(self.tokenizer, all_sentences, verbose=True)        
+        embedded_sentences = np.array(embed_to_ints(tokenized_sentences, self.word_to_int, verbose=True))
+        
+        embedded_data = np.reshape(embedded_sentences, original_shape)
+        embedded_endings  = embedded_data[:,-1]
+        
+        avg_probs_end = []
+        
+        #statistics
+        pa = 1000
+        start = time.time()
+        tmr = time.time()
+        done = 0
+        #statistics
+        
+        for ending in embedded_endings:
             
-            full_stories = [np.append(partial, end) for end in endings]
-            full_stories = self.merge_sentences(full_stories)
-            full_stories = self.clean_strings([lambda x: x.lower(), lambda x: x.replace(".", " . ")], full_stories)
-            full_stories = self.tokenize_data(self.tokenizer, full_stories)
-            full_embed = np.array(embed_to_ints(full_stories, self.word_to_int))
-
-            # predictions = []
-            # for full_emb_end in full_embed:
-            #     self.model.predict(np.array([full_emb_end]))
-            #     predictions.append(self.model.predict(np.array([full_emb_end]))[0])
-            #     print(self.int_to_words(self.inverse_map(self.word_to_int), [full_emb_end]))
-
-        return None
-
+            #get [n_batches, n_timesteps, n_vocab] --> [n_timesteps, n_vocab]
+            prob = self.model.predict(np.array([ending]))[0]
+            
+            #resolve actual log probability
+            avg = self.find_log_probability(prob, ending)
+            
+            #statistics
+            done+=1
+            if done % pa == 0:
+                tm = time.time()
+                tft = tm-tmr
+                sps = done/(tm - start)
+                remaining = len(embedded_endings)-done
+                print("--------{}---------".format(tm-tmr ))
+                print("Current speed:{}".format(pa/tft))
+                print("Average pace:{}".format(done/(tm-start)))
+                print("ETA:{} minutes".format(remaining/(60*sps)))
+                print("Done:{}\n".format(done))
+                tmr = time.time()
+                print(self.int_to_words(self.inverse_map(self.word_to_int), [ending]))
+            #statistics
+            
+            avg_probs_end.append(avg)
+        
+        #statistics
+        pa = 1000
+        start = time.time()
+        tmr = time.time()
+        done = 0
+        #statistics
+        
+        avg_probs_full = []
+        merged_full = self.merge_sentences_ints(embedded_data)
+        
+        for i, full_story in enumerate(merged_full):
+            prob = self.model.predict(np.array([full_story]))[0]
+            
+            length_ending = len(embedded_endings[i])
+            length_full = len(full_story)
+            
+            prob = prob[length_full - length_ending - 1:]
+            
+            avg = self.find_log_probability(prob, full_story)
+            
+            avg_probs_full.append(avg)
+        
+            #statistics
+            done+=1
+            if done % pa == 0:
+                tm = time.time()
+                tft = tm-tmr
+                sps = done/(tm - start)
+                remaining = len(merged_full)-done
+                print("--------{}---------".format(tm-tmr ))
+                print("Current speed:{}".format(pa/tft))
+                print("Average pace:{}".format(done/(tm-start)))
+                print("ETA:{} minutes".format(remaining/(60*sps)))
+                print("Done:{}\n".format(done))
+                tmr = time.time()
+                print(self.int_to_words(self.inverse_map(self.word_to_int), [embedded_endings[i]]))
+            #statistics
+            
+        conditional = [a - b for (a,b) in zip(avg_probs_full, avg_probs_end)]
+        
+        return np.column_stack((avg_probs_end, avg_probs_full, conditional))
+        
+    def find_log_probability(self, probabilities, ints):
+        #probabilities: [n_timesteps, n_vocab]
+        #ints:          [n_timesteps]       ints in range of vocab size
+        
+        log_prob = 0
+        for time_step in range(len(probabilities)):
+            word_distr = probabilities[time_step]
+            word = ints[time_step]
+            probability = word_distr[word]
+            log_prob += math.log(probability)
+        
+        avg_log = log_prob / len(probabilities)
+        
+        return avg_log
+        
+    def merge_sentences_ints(self, data):
+        return np.array([self.combine_lists(sample) for sample in data])
+        
+    def combine_lists(self, list_of_lists):
+        return [item for sublist in list_of_lists for item in sublist]
+        
     def merge_sentences(self, data):
         #data:      [n_stories, n_sentences]
         #return:    [n_stories]
