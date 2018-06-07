@@ -245,7 +245,6 @@ class LanguageModelExtractor(Extractor):
             
             length_ending = len(embedded_endings[i])
             length_full = len(full_story)
-            
             prob = prob[length_full - length_ending - 1:]
             
             avg = self.find_log_probability(prob, full_story)
@@ -271,6 +270,7 @@ class LanguageModelExtractor(Extractor):
             
         #conditional = [a - b for (a,b) in zip(avg_probs_full, avg_probs_end)]
         
+
         #return np.column_stack(avg_probs_full)
         return avg_probs_full
         

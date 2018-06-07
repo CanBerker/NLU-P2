@@ -12,7 +12,7 @@ from extractors.sentiment_trajectory_extractor import SentimentTrajectoryExtract
 from extractors.embedded_closeness_extractor import EmbeddedClosenessExtractor
 from extractors.lstm_classifier_extractor import LSTMClassifierExtractor
 from extractors.language_model_extractor import LanguageModelExtractor
-#from extractors.sentence_embedding_extractor import SentenceEmbeddingExtractor
+from extractors.sentence_embedding_extractor import SentenceEmbeddingExtractor
 
 from sklearn.linear_model import LogisticRegression as LR
 
@@ -31,7 +31,12 @@ class EnsembleStrategy(Strategy):
 
     # Expects an Augmented training set.
     def fit(self, train: np.ndarray, val: np.ndarray, aug: np.ndarray) -> None:
-
+        #TMP
+        _ = val[:,:-1]
+        labels = val[:,-1]        
+        self.expanded_validation_labels = self.expand_labels(labels)
+        #TMP
+        
         self.log("augmented_data_shape={}".format(aug.shape))
         self.init_extractors(train, val, aug)        
         self.fit_extractors(self.extractors)
@@ -58,6 +63,15 @@ class EnsembleStrategy(Strategy):
         
         return predictions
     
+    def expand_labels(self, labels):
+        #labels: list of ints in [1,2]
+        all = []
+        for lab in labels:
+            tmp = [0]*2
+            tmp[int(lab) - 1] = 1
+            all.extend(tmp)
+        
+        return all
     def fit_extractors(self, extractors):
         self.log("Fitting extractors")
         for (extr, set) in extractors:
@@ -87,6 +101,7 @@ class EnsembleStrategy(Strategy):
         #                   #(LSTMClassifierExtractor(self.glove_path, self.lstm_class_model_path), aug),
         #                   (LanguageModelExtractor(self.glove_path, self.lang_model_model_path), aug),
         #                   #(SentenceEmbeddingExtractor("train_embedding.npy","test"), train),
+        #                   (SentenceEmbeddingExtractor("train_embedding_last.npy","valid_embedding_last.npy", self.save_path, self.expanded_validation_labels), train),
         #                   ]
         
     def extract_features(self, data):
