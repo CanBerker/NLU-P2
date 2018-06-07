@@ -1,4 +1,10 @@
 \documentclass{article}
+\usepackage{amsmath}
+\usepackage{caption}
+
+\def\apeqA{\SavedStyle\sim}
+\def\apeq{\setstackgap{L}{\dimexpr.5pt+1.5\LMpt}\ensurestackMath{%
+      \ThisStyle{\mathrel{\Centerstack{{\apeqA} {\apeqA} {\apeqA}}}}}}
 
 % if you need to pass options to natbib, use, e.g.:
 % \PassOptionsToPackage{numbers, compress}{natbib}
@@ -19,8 +25,10 @@
 \usepackage{nicefrac}       % compact symbols for 1/2, etc.
 \usepackage{microtype}      % microtypography
 
+\newcommand{\lstm}{LSTM }
+
 % Choose a title for your submission
-\title{Your title here}
+\title{Project 2: Predicting the End of a Story}
 
 
 \author{Student 1 \qquad Student 2 \qquad Student 3}
@@ -41,19 +49,118 @@ You can keep this short. Ideally you introduce the task already in a way that hi
 \section{Methodology}
 The base of our approach follows that of successes in previous work such as \cite{UWNLP} and \cite{COGCOMP}. More specifically our approach consists of training a binary logistic regression classifier based on an augmented data set which we create ourselves. This augmentation is based on ideas that have been successfully used in the past (e.g. \cite{LSTMClassifier}). As features for our classifier we consider a collection of feature extractors which produce a vector of features for any 5 sentence story. For each sample we combine the outputs of all feature extractors to obtain the full features of the data.
 
-
-\\\\
 Your idea. You can rename this section if you like. Early on in this section -- but not necessarily first -- make clear what category your method falls into: Is it generative? Discriminative? Is there a particular additional data source you want to use?
+
 \section{Model}
+\label{sec:model}
+
 The math/architecture of your model. This should formally describe your idea from above. If you really want to, you can merge the two sections.
 \section{Training}
 What is your objective? How do you optimize it?
 
 \section{Experiments}
+\label{sec:exp}
+
+In this section, we describe the results for the different extractors we apply
+to the {\it Story Cloze task} as well as for our Ensemble method. For all our
+approaches, the training set is first augmented as previously explained and then
+used to train each of our extractors.
+
+\subsection{Training}
+\label{subsec:training}
+
+Table \ref{tab:params} shows the number of trainable parameters of the models we
+used for the task and additionally the training duration. Our models were
+trained using 15\% of the entire training data as validation data for training.
+The accuracy with the actual validation set is evaluated after training is
+completed. 
+
+\begin{table}
+    \caption{Training parameters.}
+    \begin{center}
+        \label{tab:params}
+        \begin{tabular}{||c c c||} 
+            \hline
+            Method                 & \# Trainable parameters   & Training \\ [0.5ex] 
+            \hline\hline
+            Sentiment trajectory   & 80                        & $ \approx $ 45 secs. \\ 
+            \hline
+            Embedded closeness     & 0                         & $ \approx $ 5 secs.  \\
+            \hline
+            LSTM classifier        & $ \approx $ 200K          & 20 epochs \\ %$ \approx $ 1.2 hours \\
+            \hline
+            Language model         & $ \approx $ 1M            & 20 epochs \\ %$ \approx $ 20 hours \\
+            \hline
+            \textbf{Ensemble}      & 80                        & $ \approx $ 45 secs.  \\ [1ex] 
+            \hline
+        \end{tabular}
+    \end{center}
+\end{table}
+
+The \lstm classifier was trained for 20 epochs using 15\% of the entire training
+data as validation data for training. We did not perform more training epochs
+due to the fact that we observed a decrease in the validation accuracy and an
+increase of the loss function, i.e., the model was overfitting.  The language
+model was trained for 20 epochs using a similar configuration as the \lstm
+classifier. We observed that the loss function was still improving with the
+number of epochs done. The sentiment trajectory method is based on using a
+random forest classifier, thus its training phase is similar to other
+classification methods and in this case is not time consuming.
+
+\subsection{Results}
+\label{subsec:results}
+
+Table \ref{tab:results} shows the accuracy obtained by different methods on the
+validation and the provided test set. 
+
+\begin{table}
+    \caption{Accuracy on different data sets.}
+    \begin{center}
+        \label{tab:results}
+        \begin{tabular}{||c c c||} 
+            \hline
+            Method                 & \# Validation set         & Test set \\ [0.5ex] 
+            \hline\hline
+            Sentiment trajectory   & 61.2\%                    & \textbf{60.4\%} \\ 
+            \hline
+            Embedded closeness     & 56.5\%                    & 55.4\% \\
+            \hline
+            LSTM classifier        & 51.4\%                    & 51.3\% \\ 
+            \hline
+            Language model         & 51.2\%                    & 50.02\% \\ [1ex] 
+            \hline
+        \end{tabular}
+    \end{center}
+\end{table}
+
+Our approaches based on neural models were not able to perform as expected on
+this task. For example, the \lstm classifier scored really high while training
+(around 80\% accuracy). However it was not table to perform so well for the
+task. This is because the model is able to capture sentences with the same
+content, i.e., sentences containing the same subject, similar verbs and so on,
+but not all stories contain the same subjects and verbs. Many times the stories
+have a twist that our model is not able to capture although it might be obvious
+for a human. Moreover, our language model was not able to go beyond a 50\%
+accuracy on the test set. 
+
+On the other hand, the sentiment trajectory model is able
+to capture the how the story is actually evolving along the sentences. Thus,
+with this method we were able to score a high accuracy on both data sets.
+
+
+\subsection{Sentiment trajectory}
+
+Our {\it Sentiment trajectory} extractor takes as input the augmented data
+produced
+
+\subsection{LSTM classifier}
+\subsection{Language model}
+
 This {\bf must} at least include the accuracy of your method on the validation set.
+
 \section{Conclusion}
 You can keep this short, too. \cite{*}
 
 \bibliographystyle{plain}
-\bibliography{bib/bib}
+\bibliography{bib/refs}
 \end{document}
