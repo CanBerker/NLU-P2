@@ -8,7 +8,9 @@ def pip_depts():
 def nltk_deps():
     nltk.download('punkt')
     nltk.download('averaged_perceptron_tagger')
+    nltk.download('vader_lexicon')
+    # TODO add pos tager
 
 if __name__ == "__main__":
-    pip_deps()
+    #pip_deps()
     nltk_deps()
