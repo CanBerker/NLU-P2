@@ -5,4 +5,7 @@ __pycache__/
 venv/
 *.h5
 *.npy
-glove.*
+glove.**.bbl
+*.aux
+*.blg
+*.log
