@@ -1,5 +1,4 @@
 import numpy as np
-import time
 import sys
 
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
@@ -75,9 +74,7 @@ class EnsembleStrategy(Strategy):
     def fit_extractors(self, extractors):
         self.log("Fitting extractors")
         for (extr, set) in extractors:
-            start = time.time()
             extr.fit(set)
-            self.log("Fitting time={} secs".format(time.time() - start))
             
     def init_extractors(self, train, val, aug):
         self.log("Initializing extractors")
@@ -92,15 +89,13 @@ class EnsembleStrategy(Strategy):
             elif app == "LanguageModel":
                 self.extractors.append((LanguageModelExtractor(self.glove_path, self.lang_model_model_path), aug))
             elif app == "SentenceEmbedding":
-                #self.extractors.append((SentenceEmbeddingExtractor("train_embedding.npy","test"), train))
-                self.log("Extractor={} not implemented yet!".format(app))
-                quit()
+                self.extractors.append((SentenceEmbeddingExtractor("train_embedding_last.npy","valid_embedding_last.npy", self.save_path, self.expanded_validation_labels), train))
+                
         #self.extractors = [
-        #                    #(SentimentTrajectoryExtractor(), train),
-        #                   #(EmbeddedClosenessExtractor(self.glove_path), train),
-        #                   #(LSTMClassifierExtractor(self.glove_path, self.lstm_class_model_path), aug),
-        #                   (LanguageModelExtractor(self.glove_path, self.lang_model_model_path), aug),
-        #                   #(SentenceEmbeddingExtractor("train_embedding.npy","test"), train),
+                           #(SentimentTrajectoryExtractor(), train),
+                           #(EmbeddedClosenessExtractor(self.glove_path), train),
+                           #(LSTMClassifierExtractor(self.glove_path, self.lstm_class_model_path), aug),
+                           #(LanguageModelExtractor(self.glove_path, self.lang_model_model_path), aug),
         #                   (SentenceEmbeddingExtractor("train_embedding_last.npy","valid_embedding_last.npy", self.save_path, self.expanded_validation_labels), train),
         #                   ]
         

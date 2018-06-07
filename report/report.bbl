@@ -1,0 +1,36 @@
+\begin{thebibliography}{1}
+
+\bibitem{COGCOMP}
+Snigdha Chaturvedi, Haoruo Peng, and Dan Roth.
+\newblock Story comprehension for predicting what happens next.
+\newblock In {\em Proceedings of the 2017 Conference on Empirical Methods in
+  Natural Language Processing}, pages 1603--1614. Association for Computational
+  Linguistics, 2017.
+
+\bibitem{ROCstories}
+Nasrin Mostafazadeh, Nathanael Chambers, Xiaodong He, Devi Parikh, Dhruv Batra,
+  Lucy Vanderwende, Pushmeet Kohli, and James~F. Allen.
+\newblock A corpus and evaluation framework for deeper understanding of
+  commonsense stories.
+\newblock {\em CoRR}, abs/1604.01696, 2016.
+
+\bibitem{Mostafazadeh2017LSDSem2S}
+Nasrin Mostafazadeh, Michael Roth, Annie Louis, Nathanael Chambers, and
+  James~F. Allen.
+\newblock Lsdsem 2017 shared task: The story cloze test.
+\newblock 2017.
+
+\bibitem{LSTMClassifier}
+Melissa Roemmele, Sosuke Kobayashi, Naoya Inoue, and Andrew Gordon.
+\newblock An rnn-based binary classifier for the story cloze test.
+\newblock In {\em Proceedings of the 2nd Workshop on Linking Models of Lexical,
+  Sentential and Discourse-level Semantics}, pages 74--80. Association for
+  Computational Linguistics, 2017.
+
+\bibitem{UWNLP}
+Roy Schwartz, Maarten Sap, Ioannis Konstas, Leila Zilles, Yejin Choi, and
+  Noah~A Smith.
+\newblock Story cloze task: Uw nlp system.
+\newblock In {\em EACL Workshop LSD Sem}, pages 52--55, 2017.
+
+\end{thebibliography}
