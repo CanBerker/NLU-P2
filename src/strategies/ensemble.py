@@ -18,11 +18,13 @@ from sklearn.linear_model import LogisticRegression as LR
 
 class EnsembleStrategy(Strategy):
 
-    def __init__(self, evaluator, save_path, use_gpu, lstm_class_model_path, lang_model_model_path, glove_path=None):
+    def __init__(self, evaluator, save_path, use_gpu, lstm_class_model_path, lang_model_model_path, approaches, glove_path=None):
+        self.extractors = []
         self.use_gpu = use_gpu
         self.evaluator = evaluator
         self.glove_path = glove_path
         self.save_path = save_path
+        self.approaches = approaches
         self.lstm_class_model_path = lstm_class_model_path
         self.lang_model_model_path = lang_model_model_path
 
@@ -62,11 +64,25 @@ class EnsembleStrategy(Strategy):
             
     def init_extractors(self, train, val, aug):
         self.log("Initializing extractors")
+        for app in self.approaches:
+            self.log("Adding {0} as feature extractor".format(app))
+            if app == "SentimentTrajectory":
+                self.extractors.append((SentimentTrajectoryExtractor(), train))
+            elif app == "EmbeddedCloseness":
+                self.extractors.append((EmbeddedClosenessExtractor(self.glove_path), train))
+            elif app == "LSTMClassifier":
+                self.extractors.append((LSTMClassifierExtractor(self.glove_path, self.lstm_class_model_path), aug))
+            elif app == "LanguageModel":
+                self.extractors.append((LanguageModelExtractor(self.glove_path, self.lang_model_model_path), aug))
+            elif app == "SentenceEmbedding":
+                #self.extractors.append((SentenceEmbeddingExtractor("train_embedding.npy","test"), train))
+                self.log("Extractor={} not implemented yet!".format(app))
+                quit()
         self.extractors = [
-                           # (SentimentTrajectoryExtractor(), train),
-                           # (EmbeddedClosenessExtractor(self.glove_path), train),
+                            #(SentimentTrajectoryExtractor(), train),
+                           #(EmbeddedClosenessExtractor(self.glove_path), train),
                            #(LSTMClassifierExtractor(self.glove_path, self.lstm_class_model_path), aug),
-                            (LanguageModelExtractor(self.glove_path, self.lang_model_model_path), aug),
+                           (LanguageModelExtractor(self.glove_path, self.lang_model_model_path), aug),
                            #(SentenceEmbeddingExtractor("train_embedding.npy","test"), train),
                            ]
         

@@ -2,25 +2,16 @@ import math
 import time
 
 import numpy as np
-import tensorflow as tf
-import keras
 
-from keras.callbacks import Callback
-from keras.callbacks import ModelCheckpoint
-from keras.layers import Dense, Activation, Embedding, Dropout, TimeDistributed
-from keras.layers import LSTM
-from keras.models import Sequential, load_model
+from keras.models import load_model
 from keras.optimizers import Adam
-from keras.initializers import Constant
 from keras.preprocessing.text import Tokenizer as tk
-from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 import nltk
 
 from extractors import Extractor
 from utils.loader import load_glove
 from utils.utils import convert_to_int, embed_to_ints
-import sys
 
 class LanguageModelExtractor(Extractor):
 
@@ -28,6 +19,7 @@ class LanguageModelExtractor(Extractor):
         self.glove_path = glove_path
         self.lang_model_model_path = lang_model_model_path
         self.model = None
+        self.verbose = False
 
     def fit(self, data: np.ndarray) -> None:
         self.max_vocab = 10000
@@ -190,29 +182,6 @@ class LanguageModelExtractor(Extractor):
 
         return np.array(all_samples)
 
-    def build_graph(self, embedding_matrix):
-        self.log("Building graph")
-        if (self.use_gpu):
-            self.log("Using GPU!")
-            config = tf.ConfigProto( device_count = {'GPU': 1 , 'CPU': 56} )
-            sess = tf.Session(config=config)
-            keras.backend.set_session(sess)
-        vocab_size, embed_size = embedding_matrix.shape
-        vocab_size, embed_size = embedding_matrix.shape
-        model = Sequential()
-        model.add(Embedding(vocab_size, embed_size, weights=[embedding_matrix], trainable=False))
-        model.add(LSTM(self.hidden_size, return_sequences=True))
-        #model.add(LSTM(self.hidden_size, return_sequences=True))
-        if self.use_dropout:
-            model.add(Dropout(self.dropout_rate))
-        model.add(Dense(vocab_size))
-        model.add(Activation('softmax'))
-        
-        model.compile(loss='sparse_categorical_crossentropy', optimizer=self.optimizer, metrics=['sparse_categorical_accuracy'])
-        print(model.summary())
-        
-        return model
-
     def extract(self, data: np.ndarray):
         all_sentences = data[:,2:7]
         original_shape  = all_sentences.shape
@@ -243,19 +212,20 @@ class LanguageModelExtractor(Extractor):
             avg = self.find_log_probability(prob, ending)
             
             #statistics
-            done+=1
-            if done % pa == 0:
-                tm = time.time()
-                tft = tm-tmr
-                sps = done/(tm - start)
-                remaining = len(embedded_endings)-done
-                print("--------{}---------".format(tm-tmr ))
-                print("Current speed:{}".format(pa/tft))
-                print("Average pace:{}".format(done/(tm-start)))
-                print("ETA:{} minutes".format(remaining/(60*sps)))
-                print("Done:{}\n".format(done))
-                tmr = time.time()
-                print(self.int_to_words(self.inverse_map(self.word_to_int), [ending]))
+            if self.verbose:
+                done += 1
+                if done % pa == 0:
+                    tm = time.time()
+                    tft = tm-tmr
+                    sps = done/(tm - start)
+                    remaining = len(embedded_endings)-done
+                    print("--------{}---------".format(tm-tmr ))
+                    print("Current speed:{}".format(pa/tft))
+                    print("Average pace:{}".format(done/(tm-start)))
+                    print("ETA:{} minutes".format(remaining/(60*sps)))
+                    print("Done:{}\n".format(done))
+                    tmr = time.time()
+                    print(self.int_to_words(self.inverse_map(self.word_to_int), [ending]))
             #statistics
             
             avg_probs_end.append(avg)
@@ -283,24 +253,26 @@ class LanguageModelExtractor(Extractor):
             avg_probs_full.append(avg)
         
             #statistics
-            done+=1
-            if done % pa == 0:
-                tm = time.time()
-                tft = tm-tmr
-                sps = done/(tm - start)
-                remaining = len(merged_full)-done
-                print("--------{}---------".format(tm-tmr ))
-                print("Current speed:{}".format(pa/tft))
-                print("Average pace:{}".format(done/(tm-start)))
-                print("ETA:{} minutes".format(remaining/(60*sps)))
-                print("Done:{}\n".format(done))
-                tmr = time.time()
-                print(self.int_to_words(self.inverse_map(self.word_to_int), [embedded_endings[i]]))
+            if self.verbose:
+                done += 1
+                if done % pa == 0:
+                    tm = time.time()
+                    tft = tm-tmr
+                    sps = done/(tm - start)
+                    remaining = len(merged_full)-done
+                    print("--------{}---------".format(tm-tmr ))
+                    print("Current speed:{}".format(pa/tft))
+                    print("Average pace:{}".format(done/(tm-start)))
+                    print("ETA:{} minutes".format(remaining/(60*sps)))
+                    print("Done:{}\n".format(done))
+                    tmr = time.time()
+                    print(self.int_to_words(self.inverse_map(self.word_to_int), [embedded_endings[i]]))
             #statistics
             
         #conditional = [a - b for (a,b) in zip(avg_probs_full, avg_probs_end)]
         
-        return np.column_stack(( avg_probs_full))
+        #return np.column_stack(avg_probs_full)
+        return avg_probs_full
         
     def find_log_probability(self, probabilities, ints):
         #probabilities: [n_timesteps, n_vocab]

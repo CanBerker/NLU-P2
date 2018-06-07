@@ -31,28 +31,47 @@ if __name__ == '__main__':
     np.random.seed(135511)
     
     train_data_loc = os.path.join(os.path.join(
-        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'train_small.csv')
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'train.csv')
     validation_data_loc = os.path.join(os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'validation.csv')
+    test_data_loc = os.path.join(os.path.join(
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'test.csv')
     glove_file = "glove.6B.50d.txt"
     save_path = "checkpoint"
+    ensemble_approaches = ["SentimentTrajectoryExtractor"]
 
     parser = ArgumentParser()
-    parser.add_argument("-t", dest='tpath', help="Training dataset path")
-    parser.add_argument("-v", dest='vpath', help="Validation dataset path")
-    parser.add_argument("-s", dest='spath', default=save_path, help="Model directory")
-    parser.add_argument("-m", dest='model', help="Model to be trained")
-    parser.add_argument("-gp", dest='glove_path', help="Glove file path")
-    parser.add_argument("-g", dest='use_gpu', action='store_true', help="Use GPU for training")
-    parser.add_argument("-en", dest='use_ensemble', action='store_true', help="Use ensemble of methods")
-    parser.add_argument("-ct", dest='continue_training', action='store_true', default=False, help="Continue training")
-    parser.add_argument("-mp", dest='model_path', default=None, help="Model path to continue training")
-    parser.add_argument("-lc_mp", dest='lstm_class_model_path', default=None, help="LSTM classifier model path to be used for ensembling.")
-    parser.add_argument("-lm_mp", dest='lang_model_model_path', default=None, help="Language model model path to be used for ensembling.")
+    parser.add_argument("-t", "--training_dataset", dest='tpath', help="Training dataset path")
+    parser.add_argument("-v", "--validation_dataset", dest='vpath', help="Validation dataset path")
+    parser.add_argument("-s", "--save_model_path", dest='spath', default=save_path, help="Model directory")
+    parser.add_argument("-m", "--model_to_train", dest='model', help="Model to be trained")
+    parser.add_argument("-g", "--use_gpu", dest='use_gpu', action='store_true', help="Use GPU for training")
+    parser.add_argument("-gp", "--glove_path", dest='glove_path', help="Glove file path")
+    parser.add_argument("-en", "--use_ensemble", dest='use_ensemble', action='store_true',
+                        help="Use ensemble of methods")
+    parser.add_argument('-ea', "--ensemble_approaches", dest="ensemble_approaches", type=str, nargs='*',
+                        help='Ensemble approaches (none defaults to SentimentTrajectory)')
+    parser.add_argument("-vt", "--validate_on_testset", dest='validate_on_test', action='store_true', default=False,
+                        help="Perform validation on test set")
+    parser.add_argument("-ct", "--continue_training", dest='continue_training', action='store_true', default=False,
+                        help="Continue training")
+    parser.add_argument("-mp", "--model_cont_training_path", dest='model_path', default=None,
+                        help="Model path to continue training")
+    parser.add_argument("-lc_mp", "--lstm_class_model_path", dest='lstm_class_model_path', default=None,
+                        help="LSTM classifier model path to be used for ensembling.")
+    parser.add_argument("-lm_mp", "--lang_model_path", dest='lang_model_model_path', default=None,
+                        help="Language model model path to be used for ensembling.")
 
     args = parser.parse_args()
     print(args)
-    print(args.glove_path)
+
+    if args.validate_on_test:
+        print("Validating on TEST SET. File={}".format(test_data_loc))
+        validation_data_loc = test_data_loc
+
+    if args.ensemble_approaches is not None:
+        ensemble_approaches = args.ensemble_approaches
+
     if not Path(args.spath).is_dir():
         print("THERE IS NO SAVE DIRECTORY!!!")
         print("{0} does NOT EXISTS!".format(args.spath))
@@ -79,7 +98,6 @@ if __name__ == '__main__':
     if args.glove_path is not None:
         glove_file = args.glove_path
 
-
     print('Train data location: {}'.format(train_data_loc))
     print('Validation data location: {}'.format(validation_data_loc))
 
@@ -102,14 +120,14 @@ if __name__ == '__main__':
 
     strategy = EnsembleStrategy(EnsembleEvaluator(train_data, validation_data, aug_data),
                                 args.spath, args.use_gpu, args.lstm_class_model_path, args.lang_model_model_path,
-                                glove_file)
+                                ensemble_approaches, glove_file)
 
     if not args.use_ensemble:
         #strategy = TopicDiscoveryStrategy(TopicDiscoveryEvaluator(validation_data))
         #strategy = SentimentTrajectoryStrategy(SentimentTrajectoryEvaluator())
         #strategy = NBStrategy(PerDataPointEvaluator(train_data, validation_data))
         #strategy = StylisticFeaturesStrategy(OnlyValidationDataEvaluator())
-        regular_eval = Evaluator(train_data, validation_data)
+        regular_eval = Evaluator(aug_data, validation_data)
         #strategy = LanguageModelStrategy(regular_eval, args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
         strategy = LSTMClassifierStrategy(regular_eval, args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
         #strategy = TopicConsistencyStrategy(regular_eval, args.use_gpu)

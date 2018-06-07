@@ -37,7 +37,7 @@ class LSTMClassifierExtractor(Extractor):
         self.use_dropout = True
         self.train_size = 0.8
         self.dropout_rate = 0.5
-        self.optimizer = Adam()
+        self.optimizer = Adam(lr=0.0001)
         self.num_epochs = 20
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
                 
@@ -91,21 +91,20 @@ class LSTMClassifierExtractor(Extractor):
                                            full_stories)
                                            
         full_stories = self.tokenize_data(self.tokenizer, full_stories)
-        print(full_stories[5])
         full_embed = np.array(embed_to_ints(full_stories, self.word_to_int))
         
         feats = []
         for sample in full_embed:            
             sample = np.array(sample)
             feats.append(self.model.predict_proba([sample])[0])
-            print(self.int_to_words(self.inverse_map(self.word_to_int), [sample]))
-            print(self.model.predict_proba([sample])[0])
+            #print(self.int_to_words(self.inverse_map(self.word_to_int), [sample]))
+            #print(self.model.predict_proba([sample])[0])
         
         return feats
     
     def reduce_embedding(self, int_to_emb, word_to_int, word_to_emb, tokens):
         #Takes in an embedding and takes out only what it needs (i.e. tokens)
-        print("-- Reducing embedding--")
+        self.log("-- Reducing embedding--")
         # All next to each other
         tokens = np.concatenate(tokens)
         
@@ -113,8 +112,8 @@ class LSTMClassifierExtractor(Extractor):
         unsorted_uniques, unsorted_counts = np.unique(tokens, return_counts = True)
         
         # print Some stuff
-        print("Average token frequency:{}".format(np.average(unsorted_counts)))
-        print("Total amount of unique tokens:{}".format(len(unsorted_uniques)))
+        self.log("Average token frequency:{}".format(np.average(unsorted_counts)))
+        self.log("Total amount of unique tokens:{}".format(len(unsorted_uniques)))
         
         # Sort tokens by frequency
         sorted_unique_tokens = list(zip(unsorted_uniques, unsorted_counts))
@@ -135,12 +134,12 @@ class LSTMClassifierExtractor(Extractor):
         r_word_to_embed[self.oov_token] = self.resolve(self.oov_token, word_to_emb, emb_dim)
         r_int_to_emb.append(self.resolve(self.oov_token, word_to_emb, emb_dim))
         
-        print("Total amount of tokens attempted:      {}".format(self.total_tried))
-        print("Total amount of tokens failed to embed:{}".format(self.total_failed))
-        print("---> {}%".format(self.total_failed/self.total_tried))
-        print("Shape of new embedding:{}".format(np.array(r_int_to_emb).shape))
+        self.log("Total amount of tokens attempted:      {}".format(self.total_tried))
+        self.log("Total amount of tokens failed to embed:{}".format(self.total_failed))
+        self.log("---> {}%".format(self.total_failed/self.total_tried))
+        self.log("Shape of new embedding:{}".format(np.array(r_int_to_emb).shape))
         
-        print("--Done reducing the embeddings--\n")
+        self.log("--Done reducing the embeddings--\n")
         return r_word_to_embed, r_word_to_int, r_int_to_emb
     
     def resolve(self, word, word_to_emb, emb_dim):
@@ -161,7 +160,7 @@ class LSTMClassifierExtractor(Extractor):
     def tokenize_data(self, tokenizer, data):
         #data:      [n_stories]
         start = time.time()
-        print("--Starting to tokenize--")
+        self.log("--Starting to tokenize--")
         
         tokenized = []
         for string in data:
@@ -171,7 +170,7 @@ class LSTMClassifierExtractor(Extractor):
             tokenized.append(tokens)
             
         #res = np.array([tokenizer.tokenize(string) for string in data])
-        print("--Done tokenizing--{}\n".format(time.time()-start))
+        self.log("--Done tokenizing--{}\n".format(time.time()-start))
         return tokenized
         
     def test_model(self, valid_data, labels):
@@ -192,7 +191,7 @@ class LSTMClassifierExtractor(Extractor):
             
         print(actuals, preds)
         
-        print("Final test acc:{}".format(np.mean(np.equal(pred_b, actuals.astype(int)))))
+        self.log("Final test acc:{}".format(np.mean(np.equal(pred_b, actuals.astype(int)))))
 
 
     def int_to_words(self, reversed_dictionary, data):
@@ -254,7 +253,7 @@ class LSTMClassifierExtractor(Extractor):
         self.log("--starting to pad data--")
         for x in X:
             if len(x) > max_seq_size:
-                print("Line {0} already has length of {1}".format(x, len(x)))
+                self.log("Line {0} already has length of {1}".format(x, len(x)))
         
         padded_data = []
         for x in X:
@@ -302,7 +301,7 @@ class KerasBatchGenerator(object):
         dict = {}
         
         if len(data) != len(labels):
-            print("----------------------:fhgjklmsdfgklmjsdfg-----------------")
+            print("----------------------ERROR with KerasBatchGenerator :len(data) != len(labels):-----------------")
             
         for i in range(len(data)):
             sample = data[i]
