@@ -9,3 +9,5 @@ glove.**.bbl
 *.aux
 *.blg
 *.log
+*.out
+*.pdf
