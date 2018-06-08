@@ -57,7 +57,7 @@ if __name__ == '__main__':
     parser.add_argument("-vt", "--validate_on_testset", dest='validate_on_test', action='store_true', default=False,
                         help="Perform validation on test set")
     parser.add_argument("-eth", "--validate_on_eth_set", dest='validate_on_eth', action='store_true', default=False,
-                        help="Perform validation on ETH test set")
+                        help="Perform validation on ETH test set. Outputs score file <nlu_test.out>.")
     parser.add_argument("-ct", "--continue_training", dest='continue_training', action='store_true', default=False,
                         help="Continue training")
     parser.add_argument("-mp", "--model_cont_training_path", dest='model_path', default=None,
