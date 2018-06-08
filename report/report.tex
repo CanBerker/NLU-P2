@@ -180,21 +180,31 @@ This procedure results in a single value we denote as the \textit{embedded close
 \textbf{Language Model} Intuitively to humans some sentences make more sense than others. e.g. \textit{Jack moved recently! He picked up his home and placed it somewhere else} would make little to no sense for most humans. The key idea of this feature is to extend this to the level of stories. In order to exploit this, we took a similar approach to \cite{UWNLP} and trained an LSTM language model to define a probability distribution over a vocabulary of words given a context. 
 \begin{itemize}
 	\item \textit{Fitting:} when fitting the language model we use the original training set.
-	\item \textit{extracting}: given a 5 sentence story we use the trained model to find the probability of the entire story i.e. we find:
+	\item \textit{Extracting}: given a 5 sentence story we use the trained model to find the probability of the entire story i.e. we find:
 	\begin{multicols}{2}
 		\begin{equation}
 		P(w_1, ..., w_n) = \prod_{i=1}^{n} P(w_i|h_i)
 		\end{equation}\break
 		\begin{equation}
+		\label{eq:softmax}
 		p(w_i|h_i) = \frac{exp(W_ih_i)}{\sum_{j=1}^{V}exp(W_jh_i)}
 		\end{equation}
 	\end{multicols}
 	where $w_1, ..., w_n$ are all the words in the story, $h_i$ is the output of the LSTM cell at timestep $i$, $V$ is the vocabulary size and $W_i$ is a row of the weight matrix $W$ which corresponds with a dense layer. The feature is this probability.
-	\item \textit{implementation}: To implement the LSTM language model we used keras \cite{KERAS}. We used Stanfords pre-trained GloVe word embeddings trained on 6 billion tokens, vocabulary size $400000$ and of dimension 50. We used a singe LSTM layer with hidden size of 100, the vocabulary was limited to $10 000$ tokens. Optimization was done using the built in Adam optimizer.
+	\item \textit{implementation}: To implement the LSTM language model we used keras \cite{KERAS}. We used Stanfords pre-trained GloVe word embeddings trained on 6 billion tokens, vocabulary size $400000$ and of dimension 50. The model consist singe LSTM layer with hidden size of 100, the vocabulary was limited to $10 000$ tokens. As indicated by (\ref{eq:softmax}) we apply ashared dense layer after each timestep output and a softmax activation. Our categorical cross entropy and optimization was done using the built in Adam optimizer.
 	
 \end{itemize}
 
-\textbf{LSTM classifier} Similarly 
+\textbf{LSTM classifier} Similarly to the embedded closeness the main idea of this feature is to have an indication of how coherent an ending is to a story. However for this feature we attempted to capture a more meaningful indicator, the embedded closeness uses cosine distance which might not always be a proper indication of how semantically close two words are. This feature consists of an LSTM network with a sigmoid activation as last layer to indicate a fake or a true ending.
+\begin{itemize}
+	\item \textit{Fitting}: when fitting the classifier we use an augmented data set as described previously.
+	\item \textit{Extracting}: given a 5 sentence story we use the trained model to obtain a value between 0 and 1 indicating how likely the story is true. More concretely we extract the feature:
+	\begin{equation}
+		P(C = 1| w_1,...,w_n) = f(h_n)
+	\end{equation}
+	Where $f(.)$ if a function of the last output of the sequence $w_1,...,w_n$.
+	\item \textit{Implementation}: As in the language model from previous paragraph we use Keras to implement the classifier. We used Stanfords pre-trained GloVe word embeddings trained on 6 billion tokens, vocabulary size $400000$ and of dimension 50. The hidden size of the LSTM cell is 128. The function $f(.)$ consists of 2 hidden layers size 64 and 32 and sigmoid and relu activations respectively.
+\end{itemize}
 
 \section{Training}
 \label{sec:training}
