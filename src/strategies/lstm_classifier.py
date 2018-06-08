@@ -6,6 +6,7 @@ import numpy as np
 import tensorflow as tf
 import keras
 import nltk
+import matplotlib.pyplot as plt
 
 from keras.callbacks import ModelCheckpoint
 from keras.layers import Dense, Activation, Embedding, Dropout, TimeDistributed
@@ -28,12 +29,12 @@ class LSTMClassifierStrategy(Strategy):
         self.max_vocab = 10000
         self.oov_token = "<unk>"
         self.embedding_size = 50
-        self.hidden_size = 128
+        self.hidden_size = 256
         self.use_dropout = True
         self.train_size = 0.85
         self.dropout_rate = 0.5
         self.optimizer = Adam(lr=0.0001)
-        self.num_epochs = 10
+        self.num_epochs = 20
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
 
         # Decompose data
@@ -86,13 +87,39 @@ class LSTMClassifierStrategy(Strategy):
 
         checkpointer = ModelCheckpoint(filepath=self.save_path + model_save_name, verbose=1)
 
-        self.model.fit_generator(train_generator.generate(),
+        histories = self.model.fit_generator(train_generator.generate(),
                              steps_per_epoch=train_generator.n_batches,#len(train_x) // (self.batch_size * self.max_seq_size),
                              epochs=self.num_epochs,
                              validation_data=valid_data_generator.generate(),
                              validation_steps=valid_data_generator.n_batches,#len(validation_x)//(self.batch_size) ,#len(validation_x)//(self.batch_size * self.max_seq_size),
                              callbacks=[checkpointer]
                              )
+        self.do_plot(histories)
+
+    def do_plot(self, history):
+        # list all data in history
+        print(history.history.keys())
+        # summarize history for accuracy
+        f = plt.figure()
+        plt.plot(history.history['acc'])
+        plt.plot(history.history['val_acc'])
+        plt.title('model accuracy')
+        plt.ylabel('accuracy')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'validation'], loc='upper left')
+        #plt.show()
+        f.savefig("acc_epoch.pdf", bbox_inches='tight')
+
+        # summarize history for loss
+        ff = plt.figure()
+        plt.plot(history.history['loss'])
+        plt.plot(history.history['val_loss'])
+        plt.title('model loss')
+        plt.ylabel('loss')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'validation'], loc='upper left')
+        #plt.show()
+        ff.savefig("loss_epoch.pdf", bbox_inches='tight')
 
     def reduce_embedding(self, int_to_emb, word_to_int, word_to_emb, tokens):
         #Takes in an embedding and takes out only what it needs (i.e. tokens)
@@ -199,14 +226,13 @@ class LSTMClassifierStrategy(Strategy):
         vocab_size, embed_size = embedding_matrix.shape
         model = Sequential()
         model.add(Embedding(vocab_size, embed_size, weights=[embedding_matrix], trainable=False))
-        model.add(LSTM(self.hidden_size,return_sequences=True))
+        model.add(LSTM(self.hidden_size, return_sequences=True))
         model.add(LSTM(self.hidden_size))
-        if self.use_dropout:
-            model.add(Dropout(self.dropout_rate))
-        model.add(Dense(32))
-        model.add(Activation('relu'))
-        #model.add(Dense(64))
+        #if self.use_dropout:
+        #    model.add(Dropout(self.dropout_rate))
+        #model.add(Dense(32))
         #model.add(Activation('relu'))
+        model.add(Dense(32))
         model.add(Dense(1))
         model.add(Activation('sigmoid'))
         
@@ -220,10 +246,12 @@ class LSTMClassifierStrategy(Strategy):
         #--> data[:,0] contains ID'sa
         #--> data[:,1-5] contains first 4 sentences
         #--> data[:,5-7] contains 2 ending options
-        # TODO this should read from self.model_path if available
+
+        self.log("Starting prediction phase.")
         model_save_name = "/model-{}.hdf5".format(str(self.num_epochs).zfill(2))
         if self.continue_training:
             model_save_name = "/model-cont-{}.hdf5".format(str(self.num_epochs).zfill(2))
+        self.log("Loading model from file={}".format(self.save_path + model_save_name))
         self.model = load_model(self.save_path + model_save_name)
         #self.model = load_model(self.save_path + )
         self.log(self.model.summary())
@@ -247,11 +275,11 @@ class LSTMClassifierStrategy(Strategy):
             predictions = []
             for end in full_embed:
                 predictions.append(self.model.predict(np.array([end]))[0])
-                print(self.int_to_words(self.inverse_map(self.word_to_int), [end]))
+                #print(self.int_to_words(self.inverse_map(self.word_to_int), [end]))
             
             
             choice = np.argmax(predictions) + 1
-            print(predictions, choice)
+            #print(predictions, choice)
             choices.append(choice)
             
         return choices
