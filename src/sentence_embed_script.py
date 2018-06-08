@@ -28,7 +28,7 @@ with open(data_loc, 'r') as f:
     data = np.array([np.array(line) for line in csv_read])
 
 if DATA_FORMAT == "TRAIN":
-    data = data[:,2:7]
+    data = data[:,5:7]
 elif DATA_FORMAT == "VALIDATION":
     # 1-4: Partial_story
     # 5  : ending 1
