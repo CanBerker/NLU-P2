@@ -36,6 +36,7 @@ class LSTMClassifierStrategy(Strategy):
         self.optimizer = Adam(lr=0.0001)
         self.num_epochs = 20
         self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
+        self.to_plot = False
 
         # Decompose data
         _ = data[:,0]
@@ -94,7 +95,8 @@ class LSTMClassifierStrategy(Strategy):
                              validation_steps=valid_data_generator.n_batches,#len(validation_x)//(self.batch_size) ,#len(validation_x)//(self.batch_size * self.max_seq_size),
                              callbacks=[checkpointer]
                              )
-        self.do_plot(histories)
+        if self.to_plot:
+            self.do_plot(histories)
 
     def do_plot(self, history):
         # list all data in history
