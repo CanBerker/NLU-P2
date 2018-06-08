@@ -18,7 +18,7 @@ from sklearn.linear_model import LogisticRegression as LR
 
 class EnsembleStrategy(Strategy):
 
-    def __init__(self, evaluator, save_path, use_gpu, lstm_class_model_path, lang_model_model_path, approaches, glove_path=None):
+    def __init__(self, evaluator, save_path, use_gpu, lstm_class_model_path, lang_model_model_path, approaches, eth_format=False, glove_path=None):
         self.extractors = []
         self.use_gpu = use_gpu
         self.evaluator = evaluator
@@ -27,13 +27,15 @@ class EnsembleStrategy(Strategy):
         self.approaches = approaches
         self.lstm_class_model_path = lstm_class_model_path
         self.lang_model_model_path = lang_model_model_path
+        self.eth_format = eth_format
 
     # Expects an Augmented training set.
     def fit(self, train: np.ndarray, val: np.ndarray, aug: np.ndarray) -> None:
         #TMP
-        _ = val[:,:-1]
-        labels = val[:,-1]        
-        self.expanded_validation_labels = self.expand_labels(labels)
+        if not self.eth_format:
+            _ = val[:,:-1]
+            labels = val[:,-1]        
+            self.expanded_validation_labels = self.expand_labels(labels)
         #TMP
         
         self.log("augmented_data_shape={}".format(aug.shape))

@@ -36,9 +36,12 @@ if __name__ == '__main__':
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'validation.csv')
     test_data_loc = os.path.join(os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'test.csv')
+    eth_data_loc = os.path.join(os.path.join(
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'test_nlu18.csv')
+
     glove_file = "glove.6B.50d.txt"
     save_path = "checkpoint"
-    ensemble_approaches = ["SentimentTrajectoryExtractor"]
+    ensemble_approaches = ["SentimentTrajectory"]
 
     parser = ArgumentParser()
     parser.add_argument("-t", "--training_dataset", dest='tpath', help="Training dataset path")
@@ -53,6 +56,8 @@ if __name__ == '__main__':
                         help='Ensemble approaches (none defaults to SentimentTrajectory)')
     parser.add_argument("-vt", "--validate_on_testset", dest='validate_on_test', action='store_true', default=False,
                         help="Perform validation on test set")
+    parser.add_argument("-eth", "--validate_on_eth_set", dest='validate_on_eth', action='store_true', default=False,
+                        help="Perform validation on ETH test set")
     parser.add_argument("-ct", "--continue_training", dest='continue_training', action='store_true', default=False,
                         help="Continue training")
     parser.add_argument("-mp", "--model_cont_training_path", dest='model_path', default=None,
@@ -68,6 +73,9 @@ if __name__ == '__main__':
     if args.validate_on_test:
         print("Validating on TEST SET. File={}".format(test_data_loc))
         validation_data_loc = test_data_loc
+    if args.validate_on_eth:
+        print("Validating on TEST SET. File={}".format(eth_data_loc))
+        validation_data_loc = eth_data_loc
 
     if args.ensemble_approaches is not None:
         ensemble_approaches = args.ensemble_approaches
@@ -104,6 +112,12 @@ if __name__ == '__main__':
     train_data = readers.TrainReader(train_data_loc).read()
     validation_data = readers.ValidationReader(validation_data_loc).read()
 
+    if args.validate_on_eth:
+        n_samples, n_sentences = validation_data.shape
+        extra_col = np.zeros((n_samples, 1))
+        validation_data = np.column_stack((extra_col, validation_data, extra_col))
+        print(validation_data.shape)
+
     negative_samples = augment_data(train_data, 1, load=False)
     positive_samples = train_data
     
@@ -118,7 +132,7 @@ if __name__ == '__main__':
     print("all_labels.shape=", np.array(all_labels).shape)
     print("aug_data.shape=", aug_data.shape)
 
-    strategy = EnsembleStrategy(EnsembleEvaluator(train_data, validation_data, aug_data),
+    strategy = EnsembleStrategy(EnsembleEvaluator(train_data, validation_data, aug_data, args.validate_on_eth),
                                 args.spath, args.use_gpu, args.lstm_class_model_path, args.lang_model_model_path,
                                 ensemble_approaches, glove_file)
 

@@ -54,8 +54,8 @@ class SentimentTrajectoryExtractor(Extractor):
         endings = data[:,6]
         full_stories = data[:,7-self.n_sentences:7]
         
-        print(full_stories.shape)
-        print(endings.shape)
+        self.log(full_stories.shape)
+        self.log(endings.shape)
         
         # IMPORTANT: group test set exectly the same as when training otherwise 
         # nothing makes sense! Except for the last sentence which by definition

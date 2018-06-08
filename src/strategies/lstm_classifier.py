@@ -232,9 +232,10 @@ class LSTMClassifierStrategy(Strategy):
         model.add(LSTM(self.hidden_size))
         #if self.use_dropout:
         #    model.add(Dropout(self.dropout_rate))
-        #model.add(Dense(32))
-        #model.add(Activation('relu'))
+        model.add(Dense(64))
+        model.add(Activation('sigmoid'))
         model.add(Dense(32))
+        model.add(Activation('relu'))
         model.add(Dense(1))
         model.add(Activation('sigmoid'))
         

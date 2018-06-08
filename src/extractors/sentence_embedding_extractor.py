@@ -50,15 +50,15 @@ class SentenceEmbeddingExtractor(Extractor):
         
         embedded_aug = np.array(embedded_aug)
         
-        print("Validation data shape:{}".format(embedded_valid.shape))
+        self.format("Validation data shape:{}".format(embedded_valid.shape))
         #print("Augmented the training data to:{}".format(np.array(embedded_aug).shape))
         
         valid_features = self.extract_features(embedded_valid)
         features = self.extract_features(embedded_aug)
         n_samples, n_features = features.shape
         
-        print("Features of training data of shape:{}".format(features.shape))
-        print("Features of validation data of shape:{}".format(valid_features.shape))
+        self.format("Features of training data of shape:{}".format(features.shape))
+        self.format("Features of validation data of shape:{}".format(valid_features.shape))
         
         model_save_name = '/model-{epoch:02d}.hdf5'
         checkpointer = ModelCheckpoint(filepath=self.save_path + model_save_name, verbose=1)

@@ -23,8 +23,6 @@ class SentimentTrajectoryStrategy(Strategy):
         titles = data[:,1]
         stories = data[:,-self.n_sentences:]        
         
-        self.classifier = rf()
-        
         #Group sentences to form blocks for sentiment
         stories = self.group_stories(stories, self.story_grouping)
         
