@@ -15,6 +15,7 @@
 
 \usepackage[final]{nips_2017}
 
+\usepackage{multicol}
 \usepackage{graphicx}
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
@@ -94,7 +95,6 @@ C_i: \mathbb{S}^5 \rightarrow \mathbb{R}^{l(i)}
 \end{equation}
 That is, afunction of the set of all 5 sentence stories ($\mathbb{S}^5$) to a real vector. Note that not all extractors need to map to the same length vectors. We apply all the feature extractions to the augmented dataset as described in section 2.1. This is denoted by $C_i(X)$ in figure \ref*{Main}. We then apply logistic regression implemented in scikit-learn \cite{SKL} using the extracted dataset and the labels of the augmented set.
 
-\pagebreak
 \subsection{Fitting extractors}
 In order to extract features from 5 sentence stories, the extractors have to be fitted first. This means it sees either an augmented data set as described in section \ref{sec:augmentation} or on the original ROC data set.
 %\begin{figure}[h!]
@@ -143,7 +143,25 @@ This procedure results in a single value we denote as the \textit{embedded close
 \end{itemize}
 %The math/architecture of your model. This should formally describe your idea from above. If you really want to, you can merge the two sections.
 
-\textbf{Language Model} Intuitively to humans some sentences make more sense than others. e.g. \textit{Jack moved recently! He picked up his home and placed it somewhere else} would make little to no sense for most humans. The key idea of this feature is to extend this to the level of stories. In order to exploit this, we took a similar approach to \cite{UWNLP} and trained an LSTM language model. 
+\textbf{Language Model} Intuitively to humans some sentences make more sense than others. e.g. \textit{Jack moved recently! He picked up his home and placed it somewhere else} would make little to no sense for most humans. The key idea of this feature is to extend this to the level of stories. In order to exploit this, we took a similar approach to \cite{UWNLP} and trained an LSTM language model to define a probability distribution over a vocabulary of words given a context. 
+\begin{itemize}
+	\item \textit{Fitting:} when fitting the language model we use the original training set.
+	\item \textit{extracting}: given a 5 sentence story we use the trained model to find the probability of the entire story i.e. we find:
+	\begin{multicols}{2}
+		\begin{equation}
+		P(w_1, ..., w_n) = \prod_{i=1}^{n} P(w_i|h_i)
+		\end{equation}\break
+		\begin{equation}
+		p(w_i|h_i) = \frac{exp(W_ih_i)}{\sum_{j=1}^{V}exp(W_jh_i)}
+		\end{equation}
+	\end{multicols}
+	where $w_1, ..., w_n$ are all the words in the story, $h_i$ is the output of the LSTM cell at timestep $i$, $V$ is the vocabulary size and $W_i$ is a row of the weight matrix $W$ which corresponds with a dense layer. The feature is this probability.
+	\item \textit{implementation}: To implement the LSTM language model we used keras \cite{KERAS}. We used Stanfords pre-trained GloVe word embeddings trained on 6 billion tokens, vocabulary size $400000$ and of dimension 50. We used a singe LSTM layer with hidden size of 100, the vocabulary was limited to $10 000$ tokens. Optimization was done using the built in Adam optimizer.
+	
+\end{itemize}
+
+\textbf{LSTM classifier} Similarly 
+
 \section{Training}
 \label{sec:training}
 %What is your objective? How do you optimize it?
@@ -159,7 +177,7 @@ trained using 15\% of the entire training data as validation data for training.
 The accuracy with the actual validation set is evaluated after training is
 completed. 
 
-\begin{table}
+\begin{table}[h!]
     \caption{Training parameters.}
     \begin{center}
         \label{tab:params}
@@ -197,7 +215,7 @@ classification methods and in this case is not time consuming.
 Table \ref{tab:results} shows the accuracy obtained by different methods on the
 validation and the provided test set. 
 
-\begin{table}
+\begin{table}[h!]
     \caption{Accuracy on different data sets.}
     \begin{center}
         \label{tab:results}
