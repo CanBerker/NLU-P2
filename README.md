@@ -5,11 +5,14 @@ Natural Language Understanding - Project 2
 1. Wikipedia word embeddings 
     1.1. Download the word embeddings [http://nlp.stanford.edu/data/glove.6B.zip]
     1.2. Unzip word embeddings file
-2. Check parameters
+2. Set up project which has been developed using python3
+    2.0. Install python dependencies
+	apt-get install libhdf5-dev  python-h5py	
+	```pip3.6 install -r requirements.txt```
     2.1. Execute the setup script:
-        ``` python setup.py ```
+        ``` python3.6 setup.py ```
     2.2. Run
-        ``` python src/main.py --help```
+        ``` python3.6 src/main.py --help```
          This should print the following parameters:
         ``` 
          usage: main.py [-h] [-t TPATH] [-v VPATH] [-s SPATH] [-m MODEL] [-g]
