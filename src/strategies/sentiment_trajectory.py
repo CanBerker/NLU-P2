@@ -1,6 +1,5 @@
 import numpy as np
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
-from sklearn.ensemble import RandomForestClassifier as rf
 
 from strategies import Strategy
 

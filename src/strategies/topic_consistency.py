@@ -5,7 +5,6 @@ import time
 from strategies import Strategy
 from collections import Counter
 
-from random import randint
 from nltk.tag import pos_tag
 from nltk.tokenize import word_tokenize
 from utils.loader import load_glove

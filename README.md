@@ -1,5 +1,10 @@
 # NLU-P2
 Natural Language Understanding - Project 2
+Source structure:
+/data --> training, validation, and test datasets
+/src
+    /strategies --> contains all the code to train the models
+    /extractors --> contains all the code to utilize the trained models
 
 ## Requirements
 1. Wikipedia word embeddings 

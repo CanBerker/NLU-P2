@@ -1,26 +1,20 @@
 import math
-import math
 import time
 
 import numpy as np
 import tensorflow as tf
 import keras
 
-from keras.callbacks import Callback
-from keras.callbacks import ModelCheckpoint
-from keras.layers import Dense, Activation, Embedding, Dropout, TimeDistributed
+from keras.layers import Dense, Activation, Embedding, Dropout
 from keras.layers import LSTM
 from keras.models import Sequential, load_model
 from keras.optimizers import Adam
-from keras.initializers import Constant
-from keras.preprocessing.text import Tokenizer as tk
-from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 import nltk
 
 from extractors import Extractor
 from utils.loader import load_glove
-from utils.utils import convert_to_int, embed_to_ints
+from utils.utils import embed_to_ints
 
 
 class LSTMClassifierExtractor(Extractor):

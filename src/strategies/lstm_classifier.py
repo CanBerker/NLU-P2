@@ -1,6 +1,5 @@
 import math
 import time
-import sys
 
 import numpy as np
 import tensorflow as tf
@@ -9,18 +8,16 @@ import nltk
 import matplotlib.pyplot as plt
 
 from keras.callbacks import ModelCheckpoint
-from keras.layers import Dense, Activation, Embedding, Dropout, TimeDistributed
+from keras.layers import Dense, Activation, Embedding
 from keras.layers import LSTM
 from keras.models import Sequential, load_model
 from keras.optimizers import Adam
-from keras.initializers import Constant
 from keras.preprocessing.text import Tokenizer as tk
-from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 
 from strategies import Strategy
 from utils.loader import load_glove
-from utils.utils import convert_to_int, embed_to_ints
+from utils.utils import embed_to_ints
 
 
 class LSTMClassifierStrategy(Strategy):
@@ -89,10 +86,10 @@ class LSTMClassifierStrategy(Strategy):
         checkpointer = ModelCheckpoint(filepath=self.save_path + model_save_name, verbose=1)
 
         histories = self.model.fit_generator(train_generator.generate(),
-                             steps_per_epoch=train_generator.n_batches,#len(train_x) // (self.batch_size * self.max_seq_size),
+                             steps_per_epoch=train_generator.n_batches,
                              epochs=self.num_epochs,
                              validation_data=valid_data_generator.generate(),
-                             validation_steps=valid_data_generator.n_batches,#len(validation_x)//(self.batch_size) ,#len(validation_x)//(self.batch_size * self.max_seq_size),
+                             validation_steps=valid_data_generator.n_batches,
                              callbacks=[checkpointer]
                              )
         if self.to_plot:
