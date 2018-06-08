@@ -18,7 +18,8 @@ from sklearn.linear_model import LogisticRegression as LR
 
 class EnsembleStrategy(Strategy):
 
-    def __init__(self, evaluator, save_path, use_gpu, lstm_class_model_path, lang_model_model_path, approaches, eth_format=False, glove_path=None):
+    def __init__(self, evaluator, save_path, use_gpu, lstm_class_model_path,
+                lang_model_model_path, approaches, eth_format=False, glove_path=None):
         self.extractors = []
         self.use_gpu = use_gpu
         self.evaluator = evaluator
@@ -30,20 +31,18 @@ class EnsembleStrategy(Strategy):
         self.eth_format = eth_format
 
     # Expects an Augmented training set.
-    def fit(self, train: np.ndarray, val: np.ndarray, aug: np.ndarray) -> None:
-        #TMP
-        if not self.eth_format:
-            _ = val[:,:-1]
-            labels = val[:,-1]        
-            self.expanded_validation_labels = self.expand_labels(labels)
-        #TMP
+    def fit(self, train: np.ndarray, aug: np.ndarray) -> None:
         
         self.log("augmented_data_shape={}".format(aug.shape))
-        self.init_extractors(train, val, aug)        
+        
+        #Fit and init extractors
+        self.init_extractors(train, aug)        
         self.fit_extractors(self.extractors)
 
+        #Split up augmented data set into stories and labels
         stories = aug[:,:7]
         labels  = aug[:,-1]
+        
         # feature extraction
         features = self.extract_features(stories)
         # classification using extraction features
@@ -56,6 +55,7 @@ class EnsembleStrategy(Strategy):
 
         feats = self.extract_features(expanded_validation_x)
         
+        # Predict using logistic regression.
         probs = self.classifier.predict_proba(feats)[:,1]
         probs = np.reshape(probs, (-1, 2))
         
@@ -64,21 +64,14 @@ class EnsembleStrategy(Strategy):
         
         return predictions
     
-    def expand_labels(self, labels):
-        #labels: list of ints in [1,2]
-        all = []
-        for lab in labels:
-            tmp = [0]*2
-            tmp[int(lab) - 1] = 1
-            all.extend(tmp)
-        
-        return all
     def fit_extractors(self, extractors):
         self.log("Fitting extractors")
         for (extr, set) in extractors:
             extr.fit(set)
             
-    def init_extractors(self, train, val, aug):
+    def init_extractors(self, train, aug):
+        # This method selects the features we actually want to use!
+        
         self.log("Initializing extractors")
         for app in self.approaches:
             self.log("Adding {0} as feature extractor".format(app))
@@ -90,16 +83,7 @@ class EnsembleStrategy(Strategy):
                 self.extractors.append((LSTMClassifierExtractor(self.glove_path, self.lstm_class_model_path), aug))
             elif app == "LanguageModel":
                 self.extractors.append((LanguageModelExtractor(self.glove_path, self.lang_model_model_path), aug))
-            elif app == "SentenceEmbedding":
-                self.extractors.append((SentenceEmbeddingExtractor("train_embedding_last.npy","valid_embedding_last.npy", self.save_path, self.expanded_validation_labels), train))
-                
-        #self.extractors = [
-                           #(SentimentTrajectoryExtractor(), train),
-                           #(EmbeddedClosenessExtractor(self.glove_path), train),
-                           #(LSTMClassifierExtractor(self.glove_path, self.lstm_class_model_path), aug),
-                           #(LanguageModelExtractor(self.glove_path, self.lang_model_model_path), aug),
-        #                   (SentenceEmbeddingExtractor("train_embedding_last.npy","valid_embedding_last.npy", self.save_path, self.expanded_validation_labels), train),
-        #                   ]
+            
         
     def extract_features(self, data):
         #Data must be [n_samples, 7]

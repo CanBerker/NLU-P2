@@ -54,21 +54,17 @@ class SentimentTrajectoryExtractor(Extractor):
         endings = data[:,6]
         full_stories = data[:,7-self.n_sentences:7]
         
-        self.log(full_stories.shape)
-        self.log(endings.shape)
+        #self.log(full_stories.shape)
+        #self.log(endings.shape)
         
         # IMPORTANT: group test set exectly the same as when training otherwise 
         # nothing makes sense! Except for the last sentence which by definition
         # of test set cannot be in the grouping
         full_stories = self.group_stories(full_stories, self.story_grouping)
         
-        print(full_stories.shape)
-        
+        # Trajectories for each story
         sentiment_for_stories = self.find_trajectories(full_stories)
         probability_for_trajectories = self.find_trajectory_prob(sentiment_for_stories)
-        
-        print(sentiment_for_stories)
-        print(probability_for_trajectories)
         
         #endings_probabilities = self.map_probabilities(sentiment_for_endings, sentiment_distributions)
         
@@ -96,6 +92,8 @@ class SentimentTrajectoryExtractor(Extractor):
         
         #Smoothing changes nothing at this moment (count not used as prior)
         counts = np.full(shape, smoothing)
+        
+        self.log("Starting to count trajectories...")
         
         for obj in objs:
             counts[tuple(obj)] +=1
@@ -128,16 +126,17 @@ class SentimentTrajectoryExtractor(Extractor):
         return trajectory
         
     def find_trajectories(self, stories):
+        # stories to find trajectories of.
         return np.array([self.find_trajectory(story) for story in stories])
         
     def group_stories(self, data, grouping, merge_fn = lambda x: ' '.join(x)):
+        # Group the stories according to a grouping.
         n_samples, n_feat = data.shape
         n_groups = len(grouping)
         
         if n_feat != np.sum(grouping):
             raise ValueError('Cannot group, expected {0} sentences per sample but received {1}'.format(np.sum(grouping), n_feat))
 
-        #TODO: make nicer
         grouped_data = []
         low_ind = 0
         for group_size in grouping:

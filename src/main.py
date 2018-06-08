@@ -31,13 +31,13 @@ if __name__ == '__main__':
     np.random.seed(135511)
     
     train_data_loc = os.path.join(os.path.join(
-        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'train.csv')
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'train_small.csv')
     validation_data_loc = os.path.join(os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'validation.csv')
     test_data_loc = os.path.join(os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'test.csv')
     eth_data_loc = os.path.join(os.path.join(
-        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'test_nlu18.csv')
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'test_nlu18_utf-8.csv')
 
     glove_file = "glove.6B.50d.txt"
     save_path = "checkpoint"
@@ -115,7 +115,7 @@ if __name__ == '__main__':
     if args.validate_on_eth:
         n_samples, n_sentences = validation_data.shape
         extra_col = np.zeros((n_samples, 1))
-        validation_data = np.column_stack((extra_col, validation_data, extra_col))
+        validation_data = np.column_stack((extra_col, validation_data, extra_col))#Make same format as other validation
         print(validation_data.shape)
 
     negative_samples = augment_data(train_data, 1, load=False)
@@ -146,6 +146,5 @@ if __name__ == '__main__':
         strategy = LSTMClassifierStrategy(regular_eval, args.spath, args.use_gpu, glove_file, args.continue_training, args.model_path)
         #strategy = TopicConsistencyStrategy(regular_eval, args.use_gpu)
         
-    #validation_error = strategy.evaluator.validation_error(strategy, train_data, validation_data, aug_data)
     validation_error = strategy.evaluator.validation_error(strategy)
     print('\nValidation error: {}'.format(validation_error))
