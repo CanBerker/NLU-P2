@@ -24,12 +24,12 @@ class SentimentTrajectoryExtractor(Extractor):
         # defining classifier
         self.classifier = rf()
         
-        #Group sentences to form blocks for sentiment
-        stories = self.group_stories(stories, self.story_grouping)
+        #Group sentences to form blocks for sentiment [n_samples, len(n_groups)]
+        grouped_stories = self.group_stories(stories, self.story_grouping)
         
         #Convert the stories to sentiment trajectories [n_samples, n_groups]
         #Values contain 0, 1, 2 for neg, neutral and positive sentiment
-        trajectories = self.find_trajectories(stories)
+        trajectories = self.find_trajectories(grouped_stories)
                 
         #___ Counting classifier       
         #Returns a [n_values, ..., n_values] where len(...) = len(story_grouping)
