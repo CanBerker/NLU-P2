@@ -99,25 +99,21 @@ successfully in previous works \cite{UWNLP,Goel,COGCOMP}.
 
 \section{Model}
 
-	\begin{figure}[h!]
-		\centering
-		\includegraphics[scale=0.6]{fig/logistic_fitting.pdf}
-		\caption{Main components of the global approach.}
-		\label{Main}
-	\end{figure}
-
 The core components of our approach can be seen in figure \ref*{Main}. As
 previously described, each $C_i$ is a feature extractor and indicates a mapping:
-%
-\begin{equation} C_i: \mathbb{S}^5 \rightarrow \mathbb{R}^{l(i)} \end{equation}
-%
-That is a mapping function of the set of all 5 sentence stories ($\mathbb{S}^5$)
-to a real vector. Note that not all extractors need to map to the same length
-vectors and that all the feature extractions use the augmented dataset. This is
+ $C_i: \mathbb{S}^5 \rightarrow \mathbb{R}^{l(i)}$ that is a mapping function of
+ the set of all 5 sentence stories ($\mathbb{S}^5$) to a real vector. Note that 
+ not all extractors need to map to the same length vectors and that all the feature
+ extractions use the augmented dataset. This is
 denoted by $C_i(X)$ in figure \ref*{Main}. Then, we apply logistic regression
 using the Scikit-learn implementation \cite{SKL} to the extracted set of
 features and the labels of the augmented set.
-
+\begin{figure}
+	\centering
+	\includegraphics[scale=0.6]{fig/logistic_fitting.pdf}
+	\caption{Main components of the global approach.}
+	\label{Main}
+\end{figure}
 \subsection{Extractors}
 
 To extract features from 5 sentence stories, the extractors have to be fitted
@@ -143,7 +139,6 @@ the ending ($4$)\footnote{We have explored multiple ways of categorising the
     sentences in blocks and found this configuration to be the most effective,
     which is in alignment with \cite{COGCOMP}.}. For modeling the sentiment 
 trajectory from ($1$) to ($4$), let the following be a joint distribution:
-
 \begin{equation}
 \label{eq:categorical}
 (S_1, S_2,S_3,S_4) \sim Cat(\{-1,0,1\}^4, \theta)
@@ -251,7 +246,7 @@ given a context.
 		P(C = 1| w_1,...,w_n) = f(h_n)
 	\end{equation}
 	Where $f(.)$ if a function of the last output of the sequence $w_1,...,w_n$.
-	\item \textit{Implementation}: As in the language model from previous paragraph we use Keras to implement the classifier. We used Stanfords pre-trained GloVe word embeddings trained on 6 billion tokens, vocabulary size $400000$ and of dimension 50. The hidden size of the LSTM cell is 128. The function $f(.)$ consists of 2 hidden layers size 64 and 32 and sigmoid and relu activations respectively.
+	\item \textit{Implementation}: As in the language model from previous paragraph we use Keras to implement the classifier. We used Stanfords pre-trained GloVe word embeddings trained on 6 billion tokens, vocabulary size $400000$ and of dimension 50. The hidden size of the LSTM cell is 128. The function $f(.)$ consists of 2 hidden layers of size 64 and 32 and sigmoid and relu activations respectively.
 \end{itemize}
 
 \section{Training}
@@ -259,7 +254,7 @@ given a context.
 %What is your objective? How do you optimize it?
 
 In this section, we describe the results for the different extractors we apply
-to the {\it Story Cloze task} as well as for our Ensemble method. For all our
+ as well as for our Ensemble method. For all our
 approaches, the training set is first augmented as previously explained and then
 train the different extractors using either the original training set or the augmented
 set.
@@ -298,9 +293,7 @@ due to the fact that we observed a decrease in the validation accuracy and an
 increase of the loss function, i.e., the model was overfitting.  The language
 model was trained for 20 epochs using a similar configuration as the \lstm
 classifier. We observed that the loss function was still improving with the
-number of epochs done. The sentiment trajectory method is based on using a
-random forest classifier, thus its training phase is similar to other
-classification methods and in this case is not time consuming.
+number of epochs done.
 
 \section{Results}
 \label{sec:results}
