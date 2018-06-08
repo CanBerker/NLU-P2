@@ -22,6 +22,7 @@ class LanguageModelExtractor(Extractor):
         self.verbose = False
 
     def fit(self, data: np.ndarray) -> None:
+        # Parameters of the model here
         self.max_vocab = 10000
         self.oov_token = "<unk>"
         self.embedding_size = 100
@@ -94,13 +95,15 @@ class LanguageModelExtractor(Extractor):
         # Find unique tokens and count them
         unsorted_uniques, unsorted_counts = np.unique(tokens, return_counts=True)
         
-        # print Some stuff
+        # print Some stuff for clarity
         self.log("Average token frequency:{}".format(np.average(unsorted_counts)))
         self.log("Total amount of unique tokens:{}".format(len(unsorted_uniques)))
         
         # Sort tokens by frequency
         sorted_unique_tokens = list(zip(unsorted_uniques, unsorted_counts))
         sorted_unique_tokens.sort(key=lambda t: t[1], reverse=True)
+        
+        # Cut away tokens if they are too many
         sorted_unique_tokens = sorted_unique_tokens[:self.max_vocab-1]
         
         _, emb_dim = np.array(int_to_emb).shape
@@ -113,6 +116,7 @@ class LanguageModelExtractor(Extractor):
         r_int_to_emb    = [self.resolve(w, word_to_emb, emb_dim)   for i, (w,c) in enumerate(sorted_unique_tokens)]
         r_word_to_embed = {w:self.resolve(w, word_to_emb, emb_dim) for i, (w,c) in enumerate(sorted_unique_tokens)}
         
+        # Add the out of vocabulary token aswell
         r_word_to_int[self.oov_token] = len(sorted_unique_tokens)
         r_word_to_embed[self.oov_token] = self.resolve(self.oov_token, word_to_emb, emb_dim)
         r_int_to_emb.append(self.resolve(self.oov_token, word_to_emb, emb_dim))
@@ -125,6 +129,7 @@ class LanguageModelExtractor(Extractor):
         return r_word_to_embed, r_word_to_int, r_int_to_emb
     
     def resolve(self, word, word_to_emb, emb_dim, verbose=False):
+        # Resolves a word to an embedding, forms a wrapper.
         self.total_tried += 1
         try:
             emb = word_to_emb[word]
@@ -149,26 +154,6 @@ class LanguageModelExtractor(Extractor):
         if verbose:
             self.log("--Done tokenizing--{}\n".format(time.time()-start))
         return res
-        
-    def test_model(self, train_data, reversed_dictionary):
-        model = load_model(self.save_path + "/model-{}.hdf5".format(str(self.num_epochs).zfill(2)))
-        dummy_iters = 40
-        example_training_generator = KerasBatchGenerator(train_data, self.max_vocab, skip_step=1)
-        # print("Training data:")
-        # for i in range(dummy_iters):
-        #     dummy = next(example_training_generator.generate())
-        num_predict = 10
-        true_print_out = "Actual words: "
-        pred_print_out = "Predicted words: "
-        for i in range(num_predict):
-            data = next(example_training_generator.generate())
-            prediction = model.predict_proba(data[0])
-            predict_word = np.argmax(prediction,2)
-            print("true_print_out=", self.int_to_words(reversed_dictionary, data[0]))
-            print("pred_print_out=", self.int_to_words(reversed_dictionary, predict_word))
-            # true_print_out += reversed_dictionary[data[0][i]] + " "
-            # pred_print_out += reversed_dictionary[predict_word] + " "
-
 
     def int_to_words(self, reversed_dictionary, data):
         # data[batch_size, num_steps]

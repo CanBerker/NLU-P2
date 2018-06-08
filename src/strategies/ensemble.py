@@ -11,7 +11,6 @@ from extractors.sentiment_trajectory_extractor import SentimentTrajectoryExtract
 from extractors.embedded_closeness_extractor import EmbeddedClosenessExtractor
 from extractors.lstm_classifier_extractor import LSTMClassifierExtractor
 from extractors.language_model_extractor import LanguageModelExtractor
-from extractors.sentence_embedding_extractor import SentenceEmbeddingExtractor
 
 from sklearn.linear_model import LogisticRegression as LR
 
