@@ -42,8 +42,11 @@
 %\begin{abstract}
 %\end{abstract}
 
-Feel free to add more sections but those listed here are strongly recommended.
+%Feel free to add more sections but those listed here are strongly recommended.
+
 \section{Introduction}
+\label{sec:intro}
+
 Natural language is
 You can keep this short. Ideally you introduce the task already in a way that highlights the difficulties  your method will tackle.
 
@@ -74,7 +77,7 @@ That is, it's a function of the set of all 5 sentence stories ($\mathbb{S}^5$) t
 
 %The math/architecture of your model. This should formally describe your idea from above. If you really want to, you can merge the two sections.
 
-\subsection{Training}
+\section{Training}
 \label{sec:training}
 %What is your objective? How do you optimize it?
 
@@ -121,8 +124,8 @@ number of epochs done. The sentiment trajectory method is based on using a
 random forest classifier, thus its training phase is similar to other
 classification methods and in this case is not time consuming.
 
-\subsection{Results}
-\label{subsec:results}
+\section{Results}
+\label{sec:results}
 
 Table \ref{tab:results} shows the accuracy obtained by different methods on the
 validation and the provided test set. 
@@ -157,9 +160,9 @@ have a twist that our model is not able to capture although it might be obvious
 for a human. Moreover, our language model was not able to go beyond a 50\%
 accuracy on the test set. 
 
-On the other hand, the sentiment trajectory model is able
-to capture the how the story is actually evolving along the sentences. Thus,
-with this method we were able to score a high accuracy on both data sets.
+On the other hand, the sentiment trajectory model is able to capture the how the
+story is actually evolving along the sentences. Thus, with this method we were
+able to score a high accuracy on both data sets.
 
 %This {\bf must} at least include the accuracy of your method on the validation set.
 
