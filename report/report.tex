@@ -172,11 +172,29 @@ consists of a three-step process, i.e., given a 5 sentence story we do the
 following:
 
 \begin{enumerate}
-	\item A POS tagger is used on the entire story and following \cite{COGCOMP} we only consider the topic words. We chose nouns, verbs and adjectives to form the topic words.\footnote{The full set of POS tags we consider is: JJ, JJR, JJS for adjectives; NN, NNS, NNP, NNPS for  nouns and VBD, VBG, VBN, VBP, VBZ for verbs. The tags are defined in \cite{TREEBANK}}
-	\item We use pre-trained word embeddings of dimension 50 and replace each of the topic words with its respective embedding.
-	\item For each topic word in the last sentence the cosine similarity is measured to each topic word in the previous four sentences, using the embeddings. We then only consider the maximum similarity measured for each topic word in the last sentence. Lastly we take the average of the maximum measured similarities. 
+
+        \item A POS tagger is used on the entire story and following
+            \cite{COGCOMP} we only consider topic words. We chose nouns,
+            verbs and adjectives to form the topic words.\footnote{The full set
+                of POS tags we consider is: JJ, JJR, JJS for adjectives; NN,
+                NNS, NNP, NNPS for  nouns and VBD, VBG, VBN, VBP, VBZ for verbs.
+                The tags are defined in \cite{TREEBANK}}
+
+        \item We use pre-trained word embeddings of dimension 50 and replace
+            each of the topic words with its respective embedding.
+
+        \item For each topic word in the last sentence, the cosine similarity is
+            measured to each topic word in the previous four sentences using
+            the embeddings. We then only consider the maximum similarity
+            measured for each topic word in the last sentence. Lastly we take
+            the average of the maximum measured similarities.
+
 \end{enumerate}
-This procedure results in a single value we denote as the \textit{embedded closeness} of a story and measures the level of consistency of a ending to the previous four sentences.
+
+This procedure results in a single value we denote as the \textit{embedded
+    closeness} of a story and measures the consistency level of an ending to the
+rest of the story.
+
 \begin{itemize}
 	\item \textit{Fitting}: there is no fitting in this model.
 	\item \textit{Extracting}: given a 5 sentence story we apply previously described procedure to obtain an embedded closeness score. The feature is this embedded closeness.
@@ -184,10 +202,21 @@ This procedure results in a single value we denote as the \textit{embedded close
 \end{itemize}
 %The math/architecture of your model. This should formally describe your idea from above. If you really want to, you can merge the two sections.
 
-\textbf{Language Model} Intuitively to humans some sentences make more sense than others. e.g. \textit{Jack moved recently! He picked up his home and placed it somewhere else} would make little to no sense for most humans. The key idea of this feature is to extend this to the level of stories. In order to exploit this, we took a similar approach to \cite{UWNLP} and trained an LSTM language model to define a probability distribution over a vocabulary of words given a context. 
+\textbf{Language Model} Intuitively to humans some sentences make more sense
+than others, e.g, \textit{Jack moved recently! He picked up his home and placed
+    it somewhere else} would make little to no sense for most humans. The key
+idea of this feature is to extend this to the level of stories. In order to
+exploit this, we took a similar approach to \cite{UWNLP} and trained an LSTM
+language model to define a probability distribution over a vocabulary of words
+given a context. 
+
 \begin{itemize}
+
 	\item \textit{Fitting:} when fitting the language model we use the original training set.
-	\item \textit{Extracting}: given a 5 sentence story we use the trained model to find the probability of the entire story i.e. we find:
+
+	\item \textit{Extracting}: given a 5 sentence story we use the trained
+            model to find the probability of the entire story, i.e., we find:
+
 	\begin{multicols}{2}
 		\begin{equation}
 		P(w_1, ..., w_n) = \prod_{i=1}^{n} P(w_i|h_i)
@@ -197,9 +226,20 @@ This procedure results in a single value we denote as the \textit{embedded close
 		p(w_i|h_i) = \frac{exp(W_ih_i)}{\sum_{j=1}^{V}exp(W_jh_i)}
 		\end{equation}
 	\end{multicols}
-	where $w_1, ..., w_n$ are all the words in the story, $h_i$ is the output of the LSTM cell at timestep $i$, $V$ is the vocabulary size and $W_i$ is a row of the weight matrix $W$ which corresponds with a dense layer. The feature is this probability.
+
+        where $w_1, ..., w_n$ are all the words in the story, $h_i$ is the
+        output of the LSTM cell at timestep $i$, $V$ is the vocabulary size and
+        $W_i$ is a row of the weight matrix $W$ which corresponds with a dense
+        layer. The feature is this probability.
 	
-	\item \textit{implementation}: To implement the LSTM language model we used keras \cite{KERAS}. We used Stanfords pre-trained GloVe word embeddings trained on 6 billion tokens, vocabulary size $400000$ and of dimension 50. The model consist singe LSTM layer with hidden size of 100, the vocabulary was limited to $10 000$ tokens. As indicated by (\ref{eq:softmax}) we apply ashared dense layer after each timestep output and a softmax activation. Our categorical cross entropy and optimization was done using the built in Adam optimizer.
+        \item \textit{implementation}: To implement the LSTM language model we
+            used Keras \cite{KERAS}. We used Stanfords pre-trained GloVe word
+            embeddings trained on 6 billion tokens, vocabulary size $400000$ and
+            of dimension 50. The model consist singe LSTM layer with hidden size
+            of 100, the vocabulary was limited to $10 000$ tokens. As indicated
+            by (\ref{eq:softmax}) we apply a shared dense layer after each
+            timestep output and a softmax activation. Our categorical cross
+            entropy and optimization was done using the built in Adam optimizer.
 	
 \end{itemize}
 
@@ -310,7 +350,7 @@ able to score a high accuracy on both data sets.
 %This {\bf must} at least include the accuracy of your method on the validation set.
 
 \section{Conclusion}
-In this work we tackled the \textit{story cloze task} by using an ensemble-like
+In this work we tackled the \textit{Story Cloze task} by using an ensemble-like
 approach using various feature extraction methods and simple logistic regression.
 We used different features such as sentiment, embedding closeness measures and
 neural network features. However we weren't able to reproduce the same results 
