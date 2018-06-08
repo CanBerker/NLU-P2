@@ -51,7 +51,7 @@ class SentenceEmbeddingExtractor(Extractor):
         embedded_aug = np.array(embedded_aug)
         
         print("Validation data shape:{}".format(embedded_valid.shape))
-        print("Augmented the training data to:{}".format(np.array(embedded_aug).shape))
+        #print("Augmented the training data to:{}".format(np.array(embedded_aug).shape))
         
         valid_features = self.extract_features(embedded_valid)
         features = self.extract_features(embedded_aug)
@@ -101,10 +101,9 @@ class SentenceEmbeddingExtractor(Extractor):
         
     def build_model(self, input_dim, batch_size):
         inputs = Input(shape=(input_dim,))
-        #hl_1 = Dense(2400, activation='relu')(inputs)
-        hl_2 = Dense(1200, activation='relu')(inputs)
-        hl_2 = Dropout(0.5)(hl_2)
-        hl_3 = Dense(300 , activation='relu')(hl_2)        
+        hl_1 = Dense(2400, activation='relu')(inputs)
+        hl_2 = Dense(1200, activation='relu')(hl_1)
+        hl_3 = Dense(600 , activation='relu')(hl_2)        
         hl_3 = Dropout(0.5)(hl_3)
         outputs = Dense(2, activation='softmax')(hl_3)
         
