@@ -31,13 +31,13 @@ if __name__ == '__main__':
     np.random.seed(135511)
     
     train_data_loc = os.path.join(os.path.join(
-        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'train_small.csv')
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'train.csv')
     validation_data_loc = os.path.join(os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'validation.csv')
     test_data_loc = os.path.join(os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'test.csv')
     eth_data_loc = os.path.join(os.path.join(
-        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'test_nlu18_utf-8.csv')
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data'), 'test_nlu18.csv')
 
     glove_file = "glove.6B.50d.txt"
     save_path = "checkpoint"
